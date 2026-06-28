@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LHT Donor Manager</title>
+<script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a2e4a;--blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#0C447C;
+  --green:#085041;--green-light:#E1F5EE;--amber:#633806;--amber-light:#FAEEDA;
+  --red-light:#FAECE7;--red-dark:#4A1B0C;
+  --gray-100:#f7f7f5;--gray-200:#eeede9;--gray-300:#d3d1c7;
+  --gray-500:#888780;--gray-700:#444441;--gray-900:#1a1a18;--white:#ffffff;
+  --radius:10px;--radius-sm:6px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--gray-100);color:var(--gray-900);min-height:100vh;font-size:15px;line-height:1.5}
+.topbar{background:var(--navy);color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-sub{font-size:11px;opacity:0.6;margin-top:1px}
+.topbar-badge{font-size:11px;background:rgba(255,255,255,0.15);padding:3px 9px;border-radius:20px;display:none;cursor:pointer}
+.nav{display:flex;background:var(--white);border-bottom:1px solid var(--gray-200);position:sticky;top:52px;z-index:99}
+.nav-tab{flex:1;padding:11px 4px;font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--gray-500);border-bottom:2px solid transparent;transition:all 0.15s;background:none;border-top:none;border-left:none;border-right:none}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.main{max-width:480px;margin:0 auto;padding:14px}
+.card{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);padding:14px 16px;margin-bottom:10px}
+.section-head{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:10px}
+.form-label{font-size:12px;font-weight:500;color:var(--gray-700);display:block;margin-bottom:4px;margin-top:10px}
+.form-label:first-of-type{margin-top:0}
+.form-input{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--radius-sm);border:1px solid var(--gray-300);background:var(--gray-100);color:var(--gray-900);outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--blue);background:white}
+.btn-row{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:10px 14px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--gray-300);background:var(--white);color:var(--gray-900);transition:all 0.15s}
+.btn:hover{background:var(--gray-100)}
+.btn-primary{background:var(--blue);color:white;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-mid)}
+.btn-sm{padding:7px 12px;font-size:13px;flex:none}
+.msg{font-size:13px;padding:9px 11px;border-radius:var(--radius-sm);margin-top:8px;display:none}
+.msg.error{background:#FCEBEB;color:#A32D2D}
+.msg.success{background:var(--green-light);color:var(--green)}
+.msg.info{background:var(--blue-light);color:var(--blue-mid)}
+.search-wrap{position:relative;margin-bottom:10px}
+.search-input{width:100%;font-size:16px;padding:11px 14px 11px 40px;border-radius:var(--radius);border:1px solid var(--gray-300);background:var(--white);color:var(--gray-900);outline:none;-webkit-appearance:none}
+.search-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,0.1)}
+.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--gray-500);font-size:17px;pointer-events:none}
+.status-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.status-pill{font-size:12px;color:var(--green);background:var(--green-light);padding:3px 9px;border-radius:20px}
+.link-btn{font-size:12px;color:var(--gray-500);background:none;border:none;cursor:pointer;text-decoration:underline}
+.result-item{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius);padding:11px 13px;display:flex;align-items:center;gap:11px;cursor:pointer;margin-bottom:7px;transition:all 0.12s;-webkit-tap-highlight-color:transparent}
+.result-item:hover{border-color:var(--blue)}
+.avatar{width:40px;height:40px;min-width:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:var(--blue-light);color:var(--blue-mid)}
+.avatar.loyal{background:var(--green-light);color:var(--green)}
+.avatar.lapsed{background:var(--amber-light);color:var(--amber)}
+.avatar.recent{background:var(--red-light);color:var(--red-dark)}
+.result-name{font-size:13px;font-weight:600;color:var(--gray-900)}
+.result-sub{font-size:11px;color:var(--gray-500);margin-top:1px}
+/* Ledger */
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--gray-500);background:none;border:none;cursor:pointer;padding:0;margin-bottom:12px}
+.ledger-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);overflow:hidden;margin-bottom:10px}
+.ledger-hero{background:var(--navy);padding:16px;display:flex;align-items:center;gap:12px}
+.avatar-hero{width:48px;height:48px;min-width:48px;border-radius:50%;background:rgba(255,255,255,0.15);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600}
+.hero-name{font-size:15px;font-weight:600;color:white;line-height:1.3}
+.hero-sub{font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px}
+.hero-pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;margin-top:4px;display:inline-block}
+.pill-loyal{background:var(--green-light);color:var(--green)}
+.pill-active{background:var(--blue-light);color:var(--blue-mid)}
+.pill-lapsed{background:var(--amber-light);color:var(--amber)}
+.pill-one{background:var(--gray-200);color:var(--gray-700)}
+.ledger-body{padding:14px 16px}
+.sec-title{font-size:10px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.07em;margin:14px 0 7px;border-bottom:1px solid var(--gray-200);padding-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.sec-title:first-child{margin-top:0}
+.field-row{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;gap:10px}
+.field-label{font-size:12px;color:var(--gray-500);min-width:110px;flex-shrink:0}
+.field-value{font-size:12px;color:var(--gray-900);text-align:right;word-break:break-word}
+.field-value.money{color:var(--blue);font-weight:600}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:7px 0}
+.stat-box{background:var(--gray-100);border-radius:var(--radius-sm);padding:9px 11px}
+.stat-box .s-label{font-size:10px;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px}
+.stat-box .s-value{font-size:15px;font-weight:700;color:var(--blue)}
+.stat-box .s-sub{font-size:10px;color:var(--gray-500);margin-top:1px}
+.giving-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:5px 0}
+.yr-cell{background:var(--gray-100);border-radius:3px;padding:4px 2px;text-align:center}
+.yr-cell .y{font-size:9px;color:var(--gray-500)}
+.yr-cell .a{font-size:10px;font-weight:600;color:var(--gray-900)}
+.yr-cell.hit{background:var(--blue-light)}
+.yr-cell.hit .a{color:var(--blue)}
+/* Expand toggle */
+.expand-btn{background:none;border:1px solid var(--gray-300);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;color:var(--gray-700);cursor:pointer;display:flex;align-items:center;gap:4px}
+.expand-btn:hover{background:var(--gray-100)}
+.expand-section{display:none}
+.expand-section.open{display:block}
+/* Relationships */
+.rel-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-200)}
+.rel-item:last-child{border-bottom:none}
+.rel-check{width:16px;height:16px;cursor:pointer;accent-color:var(--blue);flex-shrink:0;margin-top:2px}
+.rel-info{flex:1;min-width:0}
+.rel-name{font-size:13px;font-weight:600}
+.rel-type{font-size:11px;color:var(--gray-500)}
+.rel-contact{font-size:11px;color:var(--gray-700);margin-top:2px}
+/* Ded status */
+.ded-check{display:inline-block;font-size:13px;font-weight:600;margin-left:4px}
+.ded-check.yes{color:var(--green)}
+.ded-check.no{color:#A32D2D}
+/* Email compose */
+.template-area{width:100%;font-size:13px;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--gray-300);background:var(--gray-100);min-height:120px;resize:vertical;font-family:inherit;line-height:1.6}
+.template-area:focus{border-color:var(--blue);background:white;outline:none}
+/* Detail table */
+.detail-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.detail-tbl th{padding:5px 6px;text-align:left;font-size:10px;color:var(--gray-500);font-weight:600;text-transform:uppercase;background:var(--gray-100);white-space:nowrap}
+.detail-tbl td{padding:5px 6px;border-bottom:1px solid var(--gray-200);vertical-align:top;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Edit panel */
+.edit-panel{display:none;margin-top:10px}
+.edit-panel.open{display:block}
+/* Add contact */
+.form-textarea{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--radius-sm);border:1px solid var(--gray-300);background:var(--gray-100);color:var(--gray-900);outline:none;resize:vertical;font-family:inherit;min-height:60px}
+.form-textarea:focus{border-color:var(--blue);background:white}
+.empty{text-align:center;padding:36px 16px;color:var(--gray-500)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-text{font-size:13px}
+/* yr chip */
+.yr-chip{display:inline-flex;align-items:center;background:var(--amber-light);color:var(--amber);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600;margin:2px 3px 2px 0}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">🕍 LHT Donor Manager</div>
+    <div class="topbar-sub">Yeshivat Lev HaTorah</div>
+  </div>
+  <span id="topbar-badge" class="topbar-badge" onclick="disconnect()" title="Tap to sign out"></span>
+</div>
+
+<div class="nav" id="main-nav" style="display:none">
+  <button class="nav-tab active" onclick="showTab('lookup')" id="tab-lookup">🔍 Lookup</button>
+  <button class="nav-tab" onclick="showTab('add')" id="tab-add">➕ Add</button>
+  <button class="nav-tab" onclick="showTab('sync')" id="tab-sync">🔄 Sync</button>
+</div>
+
+<div class="main">
+
+  <!-- SETUP -->
+  <div id="setup-section">
+    <div class="card">
+      <div class="section-head">Sign in to LHT Donor Manager</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">Sign in with your @levhatorah.org Google account.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="signin-btn" onclick="signIn()">Loading…</button>
+        <button class="btn" onclick="loadDemo()">Demo</button>
+      </div>
+      <div id="msg" class="msg"></div>
+      <p style="font-size:11px;color:var(--blue);text-align:center;margin-top:14px;cursor:pointer" onclick="toggleAdvanced()">Advanced ▾</p>
+      <div id="advanced-section" style="display:none;margin-top:8px">
+        <label class="form-label">Sheet ID</label>
+        <input class="form-input" id="sheet-id" value="14K7Xt33LLB7vNSU-KKHLEmtGehYed9NYWNNhYquGHno" />
+      </div>
+    </div>
+  </div>
+
+  <!-- LOOKUP TAB -->
+  <div id="tab-lookup-content" style="display:none">
+    <div class="status-bar">
+      <span class="status-pill" id="status-label">Connected</span>
+      <button class="link-btn" onclick="disconnect()">Disconnect</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search-input" type="search" placeholder="Search name, city, ID…" oninput="doSearch(this.value)" autocomplete="off" />
+    </div>
+    <div id="results-area">
+      <div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Start typing to search</div></div>
+    </div>
+  </div>
+
+  <!-- LEDGER -->
+  <div id="ledger-section" style="display:none">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div id="ledger-content"></div>
+    <!-- Edit panel (shared) -->
+    <div id="edit-panel" class="card edit-panel">
+      <div class="section-head" style="display:flex;justify-content:space-between;align-items:center">
+        <span>✏️ Edit field</span>
+        <button onclick="closeEdit()" style="background:none;border:none;font-size:20px;color:var(--gray-500);cursor:pointer">×</button>
+      </div>
+      <label class="form-label">Field</label>
+      <select class="form-input" id="edit-field-sel" onchange="onEditFieldChange()">
+        <option value="">— choose —</option>
+        <option value="Giving Category">Giving Category</option>
+        <option value="Action Plan">Action Plan</option>
+        <option value="Action Date">Action Date</option>
+        <option value="Notes">Notes</option>
+        <option value="Future Pledge Yrs">Future Pledge Yrs</option>
+        <option value="Future Pledge Amt">Future Pledge Amt</option>
+        <option value="Faulty Phone or Address">Faulty Phone or Address</option>
+      </select>
+      <label class="form-label">Current value</label>
+      <div id="edit-current" style="font-size:12px;color:var(--gray-500);background:var(--gray-100);padding:8px 10px;border-radius:var(--radius-sm);min-height:32px;margin-bottom:4px"></div>
+      <label class="form-label">New value</label>
+      <textarea class="form-textarea" id="edit-new" rows="2"></textarea>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn" onclick="closeEdit()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEdit()">Save to sheet</button>
+      </div>
+      <div id="edit-msg" class="msg"></div>
+    </div>
+    <!-- Email compose panel -->
+    <div id="email-panel" class="card edit-panel">
+      <div class="section-head" style="display:flex;justify-content:space-between;align-items:center">
+        <span>✉️ Compose Email</span>
+        <button onclick="closeEmailPanel()" style="background:none;border:none;font-size:20px;color:var(--gray-500);cursor:pointer">×</button>
+      </div>
+      <p id="email-recipients-label" style="font-size:12px;color:var(--gray-500);margin-bottom:8px"></p>
+      <label class="form-label">Subject</label>
+      <input class="form-input" id="email-subject" placeholder="Subject line…" />
+      <label class="form-label">Body</label>
+      <textarea class="template-area" id="email-body" placeholder="Dear Friend,&#10;&#10;Warm regards,&#10;Rav Benjy"></textarea>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn" onclick="closeEmailPanel()">Cancel</button>
+        <button class="btn btn-primary" onclick="sendEmail()">Create Gmail draft(s)</button>
+      </div>
+      <div id="email-msg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- ADD CONTACT TAB -->
+  <div id="tab-add-content" style="display:none">
+    <div class="card">
+      <div class="section-head">➕ Add Prospective Contact</div>
+      <label class="form-label">Full name *</label>
+      <input class="form-input" id="ac-name" placeholder="e.g. GOLDBERG, David and Sara" />
+      <label class="form-label">Phone</label>
+      <input class="form-input" id="ac-phone" type="tel" placeholder="(201) 555-1234" />
+      <label class="form-label">Email</label>
+      <input class="form-input" id="ac-email" type="email" placeholder="email@example.com" />
+      <label class="form-label">Address</label>
+      <input class="form-input" id="ac-addr" placeholder="123 Main St, Teaneck, NJ" />
+      <label class="form-label">Action Plan</label>
+      <textarea class="form-textarea" id="ac-action" placeholder="e.g. Call after Pesach"></textarea>
+      <label class="form-label">Action Date</label>
+      <input class="form-input" id="ac-date" placeholder="e.g. March 2027 · always" />
+      <label class="form-label">Notes</label>
+      <textarea class="form-textarea" id="ac-notes" placeholder="Background or context"></textarea>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn" onclick="clearAdd()">Clear</button>
+        <button class="btn btn-primary" onclick="saveNewContact()">Add to sheet</button>
+      </div>
+      <div id="ac-msg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- SYNC TAB -->
+  <div id="tab-sync-content" style="display:none">
+    <div class="card">
+      <div class="section-head">🔄 Sync Admire Payments</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Upload the Admire CSV export to compare against existing payment records.</p>
+      <label class="form-label">Payments tab name</label>
+      <input class="form-input" id="sync-tab" value="Donations_Detail" />
+      <label class="form-label" style="margin-top:12px">Upload Admire CSV</label>
+      <div id="sync-drop" style="border:2px dashed var(--gray-300);border-radius:var(--radius);padding:24px 16px;text-align:center;cursor:pointer;margin-top:4px" onclick="document.getElementById('sync-file').click()" ondragover="event.preventDefault()" ondrop="syncDrop(event)">
+        <div style="font-size:26px;margin-bottom:6px">📂</div>
+        <div style="font-size:13px;font-weight:500;color:var(--gray-700)">Tap to choose CSV</div>
+        <div id="sync-fname" style="font-size:12px;color:var(--blue);margin-top:6px;display:none"></div>
+      </div>
+      <input type="file" id="sync-file" accept=".csv" style="display:none" onchange="syncFileChosen(this)" />
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-primary" onclick="runSync()">Compare with sheet</button>
+        <button class="btn" onclick="clearSync()">Clear</button>
+      </div>
+      <div id="sync-msg" class="msg"></div>
+    </div>
+    <div id="sync-results" style="display:none"></div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const CLIENT_ID = '951254535664-gumkta7ekgdnnv2nuk6iqhi5ohpofpke.apps.googleusercontent.com';
+const SCOPES = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/gmail.compose',
+  'https://www.googleapis.com/auth/userinfo.email',
+].join(' ');
+
+const SHEET_ID_DEFAULT = '14K7Xt33LLB7vNSU-KKHLEmtGehYed9NYWNNhYquGHno';
+
+// Tab names (exact, case-sensitive)
+const TAB = {
+  CONTACTS:       'All contacts',
+  STUDENTS:       'All Students',
+  DEDICATIONS:    'Dedications',
+  RELATIONSHIPS:  'Relationships',
+  DON_OVERVIEW:   'Donations_Overview',
+  DON_DETAIL:     'Donations_Detail',
+  TUI_OVERVIEW:   'Tuition_Overview',
+  TUI_DETAIL:     'Tuition_Detail',
+};
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+let tokenClient = null;
+let accessToken = null;
+let tokenExpiresAt = 0;
+let signedInEmail = '';
+
+function gisLoaded() {
+  if (window._gisLoaded) return;
+  window._gisLoaded = true;
+  if (!window.google?.accounts?.oauth2) { setTimeout(gisLoaded, 150); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES, hd: 'levhatorah.org', callback: ''
+  });
+  const btn = document.getElementById('signin-btn');
+  if (btn) btn.textContent = '🔐 Sign in with Google';
+}
+// Fallback poller
+(function poll() {
+  if (!window._gisLoaded && window.google?.accounts?.oauth2) gisLoaded();
+  if (!window._gisLoaded) setTimeout(poll, 200);
+})();
+
+function requestToken(prompt) {
+  return new Promise((resolve, reject) => {
+    if (!tokenClient) { reject(new Error('Sign-in not ready')); return; }
+    tokenClient.callback = r => {
+      if (r.error) { reject(r); return; }
+      accessToken = r.access_token;
+      tokenExpiresAt = Date.now() + ((r.expires_in || 3600) * 1000) - 60000;
+      resolve(accessToken);
+    };
+    tokenClient.requestAccessToken({ prompt });
+  });
+}
+
+async function ensureToken() {
+  if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
+  try { return await requestToken(''); }
+  catch { return await requestToken('consent'); }
+}
+
+async function authedFetch(url, opts = {}) {
+  const token = await ensureToken();
+  opts.headers = { ...opts.headers, Authorization: 'Bearer ' + token };
+  let res = await fetch(url, opts);
+  if (res.status === 401) {
+    const t2 = await requestToken('consent');
+    opts.headers.Authorization = 'Bearer ' + t2;
+    res = await fetch(url, opts);
+  }
+  return res;
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let sheetId = SHEET_ID_DEFAULT;
+let isDemo = false;
+
+// Parsed data from each tab
+let contactRows = [], contactHdr = {};
+let studentRows = [], studentHdr = {};
+let dedRows = [], dedHdr = {};
+let relRows = [], relHdr = {};
+let donOvRows = [], donOvHdr = {};
+let tuiOvRows = [], tuiOvHdr = {};
+// Lazy-loaded
+let donDetRows = [], donDetHdr = {};
+let tuiDetRows = [], tuiDetHdr = {};
+let detailLoaded = false;
+let detailLoading = false;
+
+// Index maps
+let contactByAcct = new Map();
+let studentByAcct = new Map();
+let dedByAcct = new Map();
+let relByAcct = new Map();
+let donOvByAcct = new Map();
+let tuiOvByAcct = new Map();
+
+// Current ledger context
+let currentAcctId = '';
+let currentContactIdx = -1;
+let ledgerHistory = [];
+let emailCheckboxes = {}; // email → checked
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function hdr(arr) {
+  const h = {};
+  (arr || []).forEach((v, i) => { h[(v || '').trim().toLowerCase()] = i; });
+  return h;
+}
+function col(hdrObj, ...keys) {
+  for (const k of keys) {
+    const idx = hdrObj[k.toLowerCase()];
+    if (idx !== undefined) return idx;
+  }
+  return -1;
+}
+function get(row, hdrObj, ...keys) {
+  const i = col(hdrObj, ...keys);
+  return i >= 0 ? (row[i] || '') : '';
+}
+function normId(v) {
+  if (!v) return '';
+  return String(v).trim().replace(/,/g, '').replace(/\.0+$/, '');
+}
+function fmt$(v) {
+  const n = parseFloat(String(v).replace(/[$,\s]/g, ''));
+  return isNaN(n) || n <= 0 ? '' : '$' + Math.round(n).toLocaleString();
+}
+function initials(name) {
+  const p = name.replace(/,.*/, '').trim().split(/\s+/);
+  return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+}
+function avatarCls(cat) {
+  if (!cat) return '';
+  if (cat.includes('LOYAL')) return 'loyal';
+  if (cat.includes('RECENT')) return 'recent';
+  if (cat.includes('LAPSED')) return 'lapsed';
+  return '';
+}
+function pillCls(cat) {
+  if (!cat) return 'pill-one';
+  if (cat === 'ACTIVE_LOYAL') return 'pill-loyal';
+  if (cat.startsWith('ACTIVE')) return 'pill-active';
+  if (cat.includes('LAPSED') || cat.includes('RECENT')) return 'pill-lapsed';
+  return 'pill-one';
+}
+function pillLabel(cat) {
+  return cat.replace(/_/g, ' ');
+}
+function showMsg(id, txt, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = txt; el.className = 'msg ' + type; el.style.display = 'block';
+}
+function hideMsg(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+function colToLetter(n) { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }
+
+function toggleAdvanced() {
+  const s = document.getElementById('advanced-section');
+  s.style.display = s.style.display === 'none' ? 'block' : 'none';
+}
+
+// ─── SIGN IN / CONNECT ────────────────────────────────────────────────────────
+async function signIn() {
+  const btn = document.getElementById('signin-btn');
+  btn.disabled = true;
+  showMsg('msg', 'Opening Google sign-in…', 'info');
+  try {
+    if (!tokenClient) throw new Error('Sign-in library not loaded yet — please wait a moment and try again.');
+    await requestToken('consent');
+    sheetId = (document.getElementById('sheet-id').value || '').trim() || SHEET_ID_DEFAULT;
+    await loadAllData();
+  } catch (e) {
+    showMsg('msg', 'Sign-in failed: ' + (e.message || e.error || 'unknown'), 'error');
+  } finally { btn.disabled = false; }
+}
+
+async function loadAllData() {
+  showMsg('msg', 'Loading data…', 'info');
+  try {
+    // Batch load the 6 primary tabs (not the two detail tabs — those are lazy)
+    const tabs = [TAB.CONTACTS, TAB.STUDENTS, TAB.DEDICATIONS, TAB.RELATIONSHIPS, TAB.DON_OVERVIEW, TAB.TUI_OVERVIEW];
+    const qs = tabs.map(t => `ranges=${encodeURIComponent(t)}`).join('&');
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchGet?${qs}`;
+    const res = await authedFetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || res.status);
+    const vr = data.valueRanges || [];
+
+    // All contacts
+    const cv = vr[0]?.values || [];
+    if (cv.length < 2) throw new Error('All contacts tab appears empty or missing.');
+    contactHdr = hdr(cv[0]);
+    contactRows = cv.slice(1).filter(r => (r[col(contactHdr, 'name')] || '').trim());
+
+    // All Students
+    const sv = vr[1]?.values || [];
+    if (sv.length >= 2) { studentHdr = hdr(sv[0]); studentRows = sv.slice(1).filter(r => (r[col(studentHdr, 'name')] || '').trim()); }
+
+    // Dedications
+    const dv = vr[2]?.values || [];
+    if (dv.length >= 2) { dedHdr = hdr(dv[0]); dedRows = dv.slice(1).filter(r => (r[col(dedHdr, 'account id')] || '').toString().trim()); }
+
+    // Relationships
+    const rv = vr[3]?.values || [];
+    if (rv.length >= 2) { relHdr = hdr(rv[0]); relRows = rv.slice(1); }
+
+    // Donations_Overview
+    const dov = vr[4]?.values || [];
+    if (dov.length >= 2) { donOvHdr = hdr(dov[0]); donOvRows = dov.slice(1).filter(r => (r[col(donOvHdr, 'accountid')] || '').toString().trim()); }
+
+    // Tuition_Overview
+    const tov = vr[5]?.values || [];
+    if (tov.length >= 2) { tuiOvHdr = hdr(tov[0]); tuiOvRows = tov.slice(1).filter(r => (r[col(tuiOvHdr, 'accountid')] || '').toString().trim()); }
+
+    buildIndexes();
+    await fetchUserEmail();
+    goLive();
+  } catch (e) {
+    showMsg('msg', 'Could not load data: ' + e.message, 'error');
+  }
+}
+
+async function fetchUserEmail() {
+  try {
+    const r = await authedFetch('https://www.googleapis.com/oauth2/v3/userinfo');
+    if (r.ok) { const u = await r.json(); signedInEmail = u.email || ''; }
+  } catch {}
+}
+
+function buildIndexes() {
+  contactByAcct = new Map();
+  contactRows.forEach((r, i) => {
+    const id = normId(get(r, contactHdr, 'accountid'));
+    if (id) contactByAcct.set(id, i);
+  });
+  studentByAcct = new Map();
+  studentRows.forEach((r, i) => {
+    const id = normId(get(r, studentHdr, 'accountid'));
+    if (id) { if (!studentByAcct.has(id)) studentByAcct.set(id, []); studentByAcct.get(id).push(i); }
+    // Also index by parent account id
+    const pid = normId(get(r, studentHdr, 'parent_accountid'));
+    if (pid) {
+      const key = 'p:' + pid;
+      if (!studentByAcct.has(key)) studentByAcct.set(key, []);
+      studentByAcct.get(key).push(i);
+    }
+  });
+  dedByAcct = new Map();
+  dedRows.forEach((r, i) => {
+    const id = normId(get(r, dedHdr, 'account id'));
+    if (id) { if (!dedByAcct.has(id)) dedByAcct.set(id, []); dedByAcct.get(id).push(i); }
+  });
+  relByAcct = new Map();
+  relRows.forEach((r, i) => {
+    const a = normId(get(r, relHdr, 'persona_accountid'));
+    const b = normId(get(r, relHdr, 'personb_accountid'));
+    if (a) { if (!relByAcct.has(a)) relByAcct.set(a, []); relByAcct.get(a).push(i); }
+    if (b) { if (!relByAcct.has(b)) relByAcct.set(b, []); relByAcct.get(b).push(i); }
+  });
+  donOvByAcct = new Map();
+  donOvRows.forEach((r, i) => {
+    const id = normId(get(r, donOvHdr, 'accountid'));
+    if (id) donOvByAcct.set(id, i);
+  });
+  tuiOvByAcct = new Map();
+  tuiOvRows.forEach((r, i) => {
+    const id = normId(get(r, tuiOvHdr, 'accountid'));
+    if (id) tuiOvByAcct.set(id, i);
+  });
+}
+
+// ─── LAZY LOAD DETAIL TABS ────────────────────────────────────────────────────
+async function ensureDetailLoaded() {
+  if (detailLoaded || isDemo) return;
+  if (detailLoading) {
+    return new Promise(res => { const t = setInterval(() => { if (!detailLoading) { clearInterval(t); res(); } }, 150); });
+  }
+  detailLoading = true;
+  try {
+    const tabs = [TAB.DON_DETAIL, TAB.TUI_DETAIL];
+    const qs = tabs.map(t => `ranges=${encodeURIComponent(t)}`).join('&');
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchGet?${qs}`;
+    const res = await authedFetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const vr = data.valueRanges || [];
+    const dv = vr[0]?.values || [];
+    if (dv.length >= 2) { donDetHdr = hdr(dv[0]); donDetRows = dv.slice(1); }
+    const tv = vr[1]?.values || [];
+    if (tv.length >= 2) { tuiDetHdr = hdr(tv[0]); tuiDetRows = tv.slice(1); }
+    detailLoaded = true;
+  } catch (e) { console.warn('Detail load failed:', e); }
+  detailLoading = false;
+}
+
+// ─── GO LIVE ──────────────────────────────────────────────────────────────────
+function goLive() {
+  document.getElementById('setup-section').style.display = 'none';
+  document.getElementById('main-nav').style.display = 'flex';
+  const badge = document.getElementById('topbar-badge');
+  badge.textContent = (isDemo ? 'Demo' : (signedInEmail || 'Live')) + ' · ' + contactRows.length + ' contacts';
+  badge.style.display = 'inline-block';
+  document.getElementById('status-label').textContent = (isDemo ? 'Demo' : 'Live') + ' · ' + contactRows.length + ' contacts';
+  showTab('lookup');
+  doSearch('');
+}
+
+function disconnect() {
+  if (accessToken && window.google?.accounts?.oauth2) {
+    try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch {}
+  }
+  accessToken = null; tokenExpiresAt = 0; signedInEmail = '';
+  contactRows = []; studentRows = []; dedRows = []; relRows = [];
+  donOvRows = []; tuiOvRows = []; donDetRows = []; tuiDetRows = [];
+  detailLoaded = false; detailLoading = false; isDemo = false;
+  document.getElementById('setup-section').style.display = 'block';
+  document.getElementById('main-nav').style.display = 'none';
+  document.getElementById('topbar-badge').style.display = 'none';
+  ['lookup','add','sync'].forEach(t => {
+    const el = document.getElementById('tab-' + t + '-content');
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('ledger-section').style.display = 'none';
+  document.getElementById('msg').style.display = 'none';
+}
+
+// ─── NAV ──────────────────────────────────────────────────────────────────────
+let activeTab = 'lookup';
+function showTab(name) {
+  activeTab = name;
+  ['lookup','add','sync'].forEach(t => {
+    const c = document.getElementById('tab-' + t + '-content');
+    if (c) c.style.display = t === name ? 'block' : 'none';
+    const b = document.getElementById('tab-' + t);
+    if (b) b.classList.toggle('active', t === name);
+  });
+  document.getElementById('ledger-section').style.display = 'none';
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+function doSearch(q) {
+  const area = document.getElementById('results-area');
+  if (!q.trim()) {
+    area.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Start typing to search</div></div>';
+    return;
+  }
+  const terms = q.toLowerCase().split(/\s+/);
+  const matches = hay => terms.every(t => hay.includes(t));
+  const hits = [];
+  contactRows.forEach((r, i) => {
+    const name = get(r, contactHdr, 'name');
+    const addr = get(r, contactHdr, 'address');
+    const email = get(r, contactHdr, 'email');
+    const id = get(r, contactHdr, 'accountid');
+    const hay = [name, addr, email, id].join(' ').toLowerCase();
+    if (!matches(hay)) return;
+    const cat = get(r, contactHdr, 'giving category');
+    const life = get(r, contactHdr, 'lifetime giving (if donor 4k+)');
+    const city = (addr || '').split(',').slice(1, 3).join(',').trim();
+    hits.push({ i, name, cat, sub: [city, life ? fmt$(life) : ''].filter(Boolean).join(' · ') });
+  });
+  if (!hits.length) { area.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No results found</div></div>'; return; }
+  area.innerHTML = hits.slice(0, 15).map(h => `
+    <div class="result-item" onclick="openLedger(${h.i})">
+      <div class="avatar ${avatarCls(h.cat)}">${initials(h.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="result-name">${h.name}</div>
+        <div class="result-sub">${h.sub || '—'}</div>
+      </div>
+      <span style="color:var(--gray-300);font-size:18px">›</span>
+    </div>`).join('');
+}
+
+// ─── LEDGER ───────────────────────────────────────────────────────────────────
+function openLedger(idx) {
+  ledgerHistory.push({ tab: activeTab, scrollY: window.scrollY });
+  currentContactIdx = idx;
+  currentAcctId = normId(get(contactRows[idx], contactHdr, 'accountid'));
+  emailCheckboxes = {};
+  renderLedger(idx);
+  document.getElementById('tab-lookup-content').style.display = 'none';
+  document.getElementById('tab-add-content').style.display = 'none';
+  document.getElementById('tab-sync-content').style.display = 'none';
+  document.getElementById('ledger-section').style.display = 'block';
+  document.getElementById('edit-panel').classList.remove('open');
+  document.getElementById('email-panel').classList.remove('open');
+  window.scrollTo(0, 0);
+  // Kick off lazy detail load
+  requestAnimationFrame(() => loadAndInjectDetails(currentAcctId));
+}
+
+function goBack() {
+  const prev = ledgerHistory.pop();
+  document.getElementById('ledger-section').style.display = 'none';
+  if (prev) {
+    showTab(prev.tab);
+    setTimeout(() => window.scrollTo(0, prev.scrollY || 0), 50);
+  } else {
+    showTab('lookup');
+  }
+}
+
+function renderLedger(idx) {
+  const r = contactRows[idx];
+  const name = get(r, contactHdr, 'name');
+  const cat = get(r, contactHdr, 'giving category');
+  const addr = get(r, contactHdr, 'address');
+  const phone = get(r, contactHdr, 'phone');
+  const email = get(r, contactHdr, 'email');
+  const category = get(r, contactHdr, 'category');
+  const lifetime = get(r, contactHdr, 'lifetime giving (if donor 4k+)');
+  const pattern = get(r, contactHdr, 'giving pattern');
+  const action = get(r, contactHdr, 'action plan');
+  const actionDate = get(r, contactHdr, 'action date');
+  const notes = get(r, contactHdr, 'notes');
+  const futureYrs = get(r, contactHdr, 'future pledge yrs');
+  const futureAmt = get(r, contactHdr, 'future pledge amt');
+  const totalCommit = get(r, contactHdr, 'total commitment');
+  const faulty = get(r, contactHdr, 'faulty phone or address');
+  const yahrFor = get(r, contactHdr, 'yahrtzeit for');
+  const yahr = get(r, contactHdr, 'yahrtzeit');
+  const acctId = normId(get(r, contactHdr, 'accountid'));
+
+  // Relationships
+  const relIdxs = relByAcct.get(acctId) || [];
+  const seen = new Map();
+  relIdxs.forEach(ri => {
+    const rr = relRows[ri];
+    const isA = normId(get(rr, relHdr, 'persona_accountid')) === acctId;
+    const otherName = get(rr, relHdr, isA ? 'personb_name' : 'persona_name');
+    const relType = get(rr, relHdr, 'relationshiptype');
+    const bday = get(rr, relHdr, 'birthday');
+    const anniv = get(rr, relHdr, 'anniversary');
+    const otherId = normId(get(rr, relHdr, isA ? 'personb_accountid' : 'persona_accountid'));
+    const key = relType + '|' + otherName;
+    if (!seen.has(key)) seen.set(key, { relType, otherName, otherId, bday, anniv });
+  });
+  const rels = [...seen.values()];
+
+  // Collect emails for checkboxes
+  const emailPool = [];
+  const addEmail = (e, label) => { if (e && !emailPool.find(x => x.e === e)) emailPool.push({ e, label }); };
+  (email || '').split(';').map(s => s.trim()).filter(Boolean).forEach(e => addEmail(e, name));
+  rels.forEach(({ relType, otherName, otherId }) => {
+    // Try to find their email from contacts or students
+    const ci = contactByAcct.get(otherId);
+    if (ci !== undefined) {
+      const ce = get(contactRows[ci], contactHdr, 'email');
+      (ce || '').split(';').map(s => s.trim()).filter(Boolean).forEach(e => addEmail(e, `${otherName} (${relType})`));
+    }
+    const sis = studentByAcct.get(otherId) || [];
+    sis.forEach(si => {
+      const se = get(studentRows[si], studentHdr, 'email');
+      (se || '').split(';').map(s => s.trim()).filter(Boolean).forEach(e => addEmail(e, `${otherName} (${relType})`));
+    });
+  });
+
+  // Dedications
+  const dedIdxs = dedByAcct.get(acctId) || [];
+
+  // Donations Overview
+  const doIdx = donOvByAcct.get(acctId);
+  const doRow = doIdx !== undefined ? donOvRows[doIdx] : null;
+
+  // Year grid (2002–2026, only non-zero)
+  const YEARS = [];
+  for (let y = 2002; y <= 2026; y++) YEARS.push(y);
+  let yrCells = '';
+  let hasAnyYear = false;
+  if (doRow) {
+    YEARS.forEach(y => {
+      const v = parseFloat(get(doRow, donOvHdr, String(y))) || 0;
+      if (v > 0) {
+        hasAnyYear = true;
+        const disp = v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + Math.round(v);
+        yrCells += `<div class="yr-cell hit"><div class="y">'${String(y).slice(2)}</div><div class="a">${disp}</div></div>`;
+      }
+    });
+  }
+
+  // Donation summary from overview
+  const donLife = doRow ? fmt$(get(doRow, donOvHdr, 'lifetime giving')) : fmt$(lifetime);
+  const donFirst = doRow ? get(doRow, donOvHdr, 'first gift year') : '';
+  const donLast = doRow ? get(doRow, donOvHdr, 'last gift year') : '';
+  const donYrs = doRow ? get(doRow, donOvHdr, 'years given') : '';
+  const donLargest = doRow ? fmt$(get(doRow, donOvHdr, 'largest gift')) : '';
+  const donLargestYr = doRow ? get(doRow, donOvHdr, 'largest gift year') : '';
+  const donLastAmt = doRow ? fmt$(get(doRow, donOvHdr, 'last gift amount')) : '';
+  const donCat = doRow ? (get(doRow, donOvHdr, 'giving category') || cat) : cat;
+  const donPattern = doRow ? (get(doRow, donOvHdr, 'giving pattern') || pattern) : pattern;
+  const donFutYrs = doRow ? get(doRow, donOvHdr, 'future pledge yrs') : futureYrs;
+  const donFutAmt = doRow ? fmt$(get(doRow, donOvHdr, 'future pledge amt')) : fmt$(futureAmt);
+
+  // Student records (as child of this contact = parent)
+  const childIdxs = studentByAcct.get('p:' + acctId) || [];
+  // Or if this contact IS a student
+  const ownStudentIdxs = studentByAcct.get(acctId) || [];
+
+  // Tuition overview
+  const tuiIdx = tuiOvByAcct.get(acctId);
+  const tuiRow = tuiIdx !== undefined ? tuiOvRows[tuiIdx] : null;
+  // Also check for children's tuition
+  const childTuiRows = childIdxs.map(si => {
+    const cid = normId(get(studentRows[si], studentHdr, 'accountid'));
+    const ti = tuiOvByAcct.get(cid);
+    return ti !== undefined ? { name: get(studentRows[si], studentHdr, 'name'), row: tuiOvRows[ti], acctId: cid } : null;
+  }).filter(Boolean);
+
+  function renderTuiRow(tuiR, label) {
+    if (!tuiR) return '';
+    const subtotal = fmt$(get(tuiR, tuiOvHdr, 'subtotal tuition paid'));
+    const total = fmt$(get(tuiR, tuiOvHdr, 'total tuittion paid') || get(tuiR, tuiOvHdr, 'total tuition paid'));
+    // Year columns (anything matching pattern "YYYY/YY FeeType")
+    let yearLines = '';
+    Object.keys(tuiOvHdr).forEach(k => {
+      const m = k.match(/^(\d{4}\/\d{2})\s+(.+)$/);
+      if (!m) return;
+      const v = parseFloat(tuiR[tuiOvHdr[k]]) || 0;
+      if (v > 0) yearLines += `<div class="field-row"><span class="field-label">${m[1]} ${m[2]}</span><span class="field-value money">${fmt$(v)}</span></div>`;
+    });
+    return `
+      ${label ? `<div style="font-size:12px;font-weight:600;color:var(--navy);margin:8px 0 4px">${label}</div>` : ''}
+      <div class="stat-row">
+        <div class="stat-box"><div class="s-label">Subtotal Paid</div><div class="s-value">${subtotal || '—'}</div></div>
+        <div class="stat-box"><div class="s-label">Total Paid</div><div class="s-value">${total || '—'}</div></div>
+      </div>
+      ${yearLines}`;
+  }
+
+  const html = `
+    <div class="ledger-card">
+      <div class="ledger-hero">
+        <div class="avatar-hero">${initials(name)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="hero-name">${name}</div>
+          <div class="hero-sub">${category || ''}${addr ? ' · ' + addr.split(',').slice(1, 3).join(',').trim() : ''}</div>
+          ${cat ? `<span class="hero-pill ${pillCls(cat)}">${pillLabel(cat)}</span>` : ''}
+        </div>
+        <button onclick="openEdit()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;cursor:pointer;flex-shrink:0">✏️ Edit</button>
+      </div>
+      <div class="ledger-body">
+
+        <!-- CONTACT INFO -->
+        <div class="sec-title">Contact</div>
+        ${phone ? phone.split(';').map(p => `<div class="field-row"><span class="field-label">Phone</span><span class="field-value">${p.trim()}</span></div>`).join('') : ''}
+        ${addr ? `<div class="field-row"><span class="field-label">Address</span><span class="field-value">${addr}</span></div>` : ''}
+        ${faulty ? `<div class="field-row"><span class="field-label">⚠️ Faulty</span><span class="field-value" style="color:#A32D2D">${faulty}</span></div>` : ''}
+
+        <!-- EMAIL -->
+        ${emailPool.length ? `
+        <div class="sec-title">Email</div>
+        ${emailPool.map(({ e, label }) => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-200);cursor:pointer">
+            <input type="checkbox" class="rel-check" id="ec-${e.replace(/[^a-z0-9]/gi,'_')}" onchange="toggleEmailCheck('${e.replace(/'/g,"\\'")}',this.checked)" />
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600">${e}</div>
+              <div style="font-size:11px;color:var(--gray-500)">${label}</div>
+            </div>
+          </label>`).join('')}
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-primary btn-sm" onclick="openEmailPanel()">✉️ Email selected</button>
+        </div>` : ''}
+
+        <!-- RELATIONSHIPS -->
+        <div class="sec-title">Relationships</div>
+        ${rels.length ? rels.map(({ relType, otherName, bday, anniv }) => `
+          <div class="rel-item">
+            <div class="rel-info">
+              <div class="rel-name">${otherName}</div>
+              <div class="rel-type">${relType}</div>
+              ${bday ? `<div class="rel-contact">🎂 ${bday}</div>` : ''}
+              ${anniv ? `<div class="rel-contact">💍 ${anniv}</div>` : ''}
+            </div>
+          </div>`).join('') : '<div style="font-size:12px;color:var(--gray-500)">No relationships on file.</div>'}
+
+        <!-- GIVING SUMMARY -->
+        <div class="sec-title" style="margin-top:14px">Giving Summary</div>
+        ${donCat ? `<div class="field-row"><span class="field-label">Category</span><span class="field-value"><span class="hero-pill ${pillCls(donCat)}" style="margin:0">${pillLabel(donCat)}</span></span></div>` : ''}
+        ${donPattern ? `<div class="field-row"><span class="field-label">Pattern</span><span class="field-value" style="font-size:11px">${donPattern}</span></div>` : ''}
+        <div class="stat-row">
+          <div class="stat-box"><div class="s-label">Lifetime</div><div class="s-value">${donLife || '—'}</div></div>
+          <div class="stat-box"><div class="s-label">Last Gift</div><div class="s-value">${donLastAmt || '—'}</div><div class="s-sub">${donLast}</div></div>
+          <div class="stat-box"><div class="s-label">Largest Gift</div><div class="s-value">${donLargest || '—'}</div><div class="s-sub">${donLargestYr}</div></div>
+          <div class="stat-box"><div class="s-label">Years Given</div><div class="s-value">${donYrs || '—'}</div><div class="s-sub">${donFirst && donLast ? donFirst + '–' + donLast : ''}</div></div>
+        </div>
+        ${donFutAmt ? `<div class="field-row"><span class="field-label">Future Pledge</span><span class="field-value money">${donFutAmt}${donFutYrs ? ' <span style="font-size:11px;font-weight:400;color:var(--gray-500)">(' + donFutYrs + ')</span>' : ''}</span></div>` : ''}
+        ${totalCommit || get(doRow||[], donOvHdr, 'total commitment') ? `<div class="field-row"><span class="field-label">Total Commitment</span><span class="field-value money">${fmt$(totalCommit || get(doRow||[], donOvHdr, 'total commitment'))}</span></div>` : ''}
+        ${action ? `<div class="field-row"><span class="field-label">Action Plan</span><span class="field-value">${action}</span></div>` : ''}
+        ${actionDate ? `<div class="field-row"><span class="field-label">Action Date</span><span class="field-value">${actionDate}</span></div>` : ''}
+        ${notes ? `<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes}</span></div>` : ''}
+        ${(yahrFor || yahr) ? `<div class="field-row"><span class="field-label">Yahrtzeit</span><span class="field-value">${yahr}${yahrFor ? ' · ' + yahrFor : ''}</span></div>` : ''}
+
+        <!-- YEAR GRID -->
+        ${hasAnyYear ? `
+        <div class="sec-title">Year by Year (non-zero only)</div>
+        <div class="giving-grid">${yrCells}</div>` : ''}
+
+        <!-- DONATION DETAIL (expandable) -->
+        <div class="sec-title">
+          <span>Donation Payments</span>
+          <button class="expand-btn" onclick="toggleExpand('don-det')">▶ Show detail</button>
+        </div>
+        <div id="don-det" class="expand-section">
+          <div id="don-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div>
+        </div>
+
+        <!-- STUDENT INFO -->
+        ${(childIdxs.length || ownStudentIdxs.length) ? `
+        <div class="sec-title">Student / Program Info</div>
+        ${[...ownStudentIdxs, ...childIdxs].map(si => {
+          const sr = studentRows[si];
+          const sname = get(sr, studentHdr, 'name');
+          const prog = get(sr, studentHdr, 'programhistory');
+          const recent = get(sr, studentHdr, 'mostrecentprogram');
+          const recentYr = get(sr, studentHdr, 'mostrecentyear');
+          const status = get(sr, studentHdr, 'status');
+          const mil = get(sr, studentHdr, 'militarystatus');
+          const post = get(sr, studentHdr, 'postprogram');
+          const solRav = get(sr, studentHdr, 'sol_rav');
+          const city = get(sr, studentHdr, 'city');
+          const state = get(sr, studentHdr, 'state');
+          const ph1 = get(sr, studentHdr, 'phone1');
+          const ph2 = get(sr, studentHdr, 'phone2');
+          const semail = get(sr, studentHdr, 'email');
+          const hesder = get(sr, studentHdr, 'hesder');
+          const idfLlc = get(sr, studentHdr, 'did idf through llc');
+          return `<div style="background:var(--gray-100);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:6px">${sname}</div>
+            ${prog ? `<div class="field-row"><span class="field-label">Programs</span><span class="field-value" style="font-size:11px">${prog}</span></div>` : ''}
+            ${recent ? `<div class="field-row"><span class="field-label">Most Recent</span><span class="field-value">${recent}${recentYr ? ' (' + recentYr + ')' : ''}</span></div>` : ''}
+            ${status ? `<div class="field-row"><span class="field-label">Status</span><span class="field-value">${status}</span></div>` : ''}
+            ${mil ? `<div class="field-row"><span class="field-label">Military</span><span class="field-value">${mil}</span></div>` : ''}
+            ${post ? `<div class="field-row"><span class="field-label">Post-Program</span><span class="field-value">${post}</span></div>` : ''}
+            ${solRav ? `<div class="field-row"><span class="field-label">Soliciting Rav</span><span class="field-value">${solRav}</span></div>` : ''}
+            ${(city || state) ? `<div class="field-row"><span class="field-label">City / State</span><span class="field-value">${[city, state].filter(Boolean).join(', ')}</span></div>` : ''}
+            ${ph1 ? `<div class="field-row"><span class="field-label">Phone</span><span class="field-value">${ph1}${ph2 ? ' · ' + ph2 : ''}</span></div>` : ''}
+            ${semail ? `<div class="field-row"><span class="field-label">Email</span><span class="field-value">${semail}</span></div>` : ''}
+            ${hesder ? `<div class="field-row"><span class="field-label">Hesder</span><span class="field-value">${hesder}</span></div>` : ''}
+            ${idfLlc ? `<div class="field-row"><span class="field-label">IDF via LLC</span><span class="field-value">${idfLlc}</span></div>` : ''}
+          </div>`;
+        }).join('')}` : ''}
+
+        <!-- TUITION OVERVIEW -->
+        ${(tuiRow || childTuiRows.length) ? `
+        <div class="sec-title">Tuition Overview</div>
+        ${tuiRow ? renderTuiRow(tuiRow, '') : ''}
+        ${childTuiRows.map(({ name: cn, row: cr }) => renderTuiRow(cr, cn)).join('')}` : ''}
+
+        <!-- TUITION DETAIL (expandable) -->
+        <div class="sec-title">
+          <span>Tuition Payments</span>
+          <button class="expand-btn" onclick="toggleExpand('tui-det')">▶ Show detail</button>
+        </div>
+        <div id="tui-det" class="expand-section">
+          <div id="tui-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div>
+        </div>
+
+        <!-- DEDICATIONS -->
+        <div class="sec-title">Dedications</div>
+        ${dedIdxs.length ? dedIdxs.map(di => {
+          const dr = dedRows[di];
+          const item = get(dr, dedHdr, 'dedication item');
+          const status = get(dr, dedHdr, 'status');
+          const text = get(dr, dedHdr, 'dedication text');
+          const notes2 = get(dr, dedHdr, 'notes');
+          const flags = get(dr, dedHdr, 'flags');
+          const hasTxt = !!(text || '').trim();
+          return `<div style="background:var(--gray-100);border-left:3px solid var(--navy);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px">
+            <div class="field-row"><span class="field-label">Item</span><span class="field-value">${item || '—'}</span></div>
+            <div class="field-row"><span class="field-label">Status</span><span class="field-value">${status || '—'}</span></div>
+            <div class="field-row"><span class="field-label">Ded. Text</span><span class="field-value">
+              <span class="ded-check ${hasTxt ? 'yes' : 'no'}">${hasTxt ? '✓ Yes' : '✗ No'}</span>
+            </span></div>
+            ${notes2 ? `<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes2}</span></div>` : ''}
+            ${flags ? `<div class="field-row"><span class="field-label">Flags</span><span class="field-value" style="font-size:11px">${flags}</span></div>` : ''}
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--gray-500)">No dedications on file.</div>'}
+
+      </div>
+    </div>`;
+
+  document.getElementById('ledger-content').innerHTML = html;
+}
+
+// ─── EXPAND TOGGLE ────────────────────────────────────────────────────────────
+function toggleExpand(id) {
+  const sec = document.getElementById(id);
+  const btn = sec.previousElementSibling.querySelector('.expand-btn');
+  const isOpen = sec.classList.contains('open');
+  sec.classList.toggle('open', !isOpen);
+  btn.textContent = isOpen ? '▶ Show detail' : '▼ Hide detail';
+  if (!isOpen) loadAndInjectDetails(currentAcctId);
+}
+
+async function loadAndInjectDetails(acctId) {
+  await ensureDetailLoaded();
+  // Donation detail
+  const donEl = document.getElementById('don-det-content');
+  if (donEl) {
+    const rows = donDetRows.filter(r => normId(get(r, donDetHdr, 'payeract_id')) === acctId);
+    donEl.innerHTML = rows.length ? renderDetailTable(rows, donDetHdr,
+      ['date','year','appliedto','appliedamount','method','cur_code','notes'],
+      ['Date','Year','Applied To','Amount','Method','Currency','Notes']
+    ) : '<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No donation payment records found.</div>';
+  }
+  // Tuition detail — include children
+  const tuiEl = document.getElementById('tui-det-content');
+  if (tuiEl) {
+    const childIds = (studentByAcct.get('p:' + acctId) || []).map(si => normId(get(studentRows[si], studentHdr, 'accountid')));
+    const allIds = new Set([acctId, ...childIds]);
+    const rows = tuiDetRows.filter(r => allIds.has(normId(get(r, tuiDetHdr, 'payeract_id'))) || allIds.has(normId(get(r, tuiDetHdr, 'studentaccountid'))));
+    tuiEl.innerHTML = rows.length ? renderDetailTable(rows, tuiDetHdr,
+      ['date','year','program','payment cat.','appliedamount','method','cur_code','studentname','notes'],
+      ['Date','Year','Program','Type','Amount','Method','Cur','Student','Notes']
+    ) : '<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No tuition payment records found.</div>';
+  }
+}
+
+function renderDetailTable(rows, hdrObj, keys, labels) {
+  const sorted = [...rows].sort((a, b) => {
+    const ya = parseInt(get(a, hdrObj, 'year')) || 0;
+    const yb = parseInt(get(b, hdrObj, 'year')) || 0;
+    return yb - ya;
+  });
+  const ths = labels.map(l => `<th>${l}</th>`).join('');
+  const tds = sorted.map(r => `<tr>${keys.map(k => `<td title="${get(r, hdrObj, k)}">${get(r, hdrObj, k)}</td>`).join('')}</tr>`).join('');
+  const total = sorted.reduce((s, r) => s + (parseFloat(get(r, hdrObj, 'appliedamount')) || 0), 0);
+  return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <table class="detail-tbl">
+      <thead><tr>${ths}</tr></thead>
+      <tbody>${tds}</tbody>
+      <tfoot><tr><td colspan="${keys.length - 1}" style="font-weight:600;padding:5px 6px;font-size:11px">Total (${sorted.length} payments)</td><td style="font-weight:700;color:var(--blue);padding:5px 6px;font-size:11px">$${Math.round(total).toLocaleString()}</td></tr></tfoot>
+    </table>
+  </div>`;
+}
+
+// ─── EDIT ─────────────────────────────────────────────────────────────────────
+let editAcctId = '', editContactIdx = -1;
+
+function openEdit() {
+  editAcctId = currentAcctId;
+  editContactIdx = currentContactIdx;
+  document.getElementById('edit-panel').classList.add('open');
+  document.getElementById('edit-field-sel').value = '';
+  document.getElementById('edit-current').textContent = '';
+  document.getElementById('edit-new').value = '';
+  hideMsg('edit-msg');
+  document.getElementById('edit-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeEdit() { document.getElementById('edit-panel').classList.remove('open'); }
+
+function onEditFieldChange() {
+  const field = document.getElementById('edit-field-sel').value;
+  if (!field || editContactIdx < 0) return;
+  const r = contactRows[editContactIdx];
+  const cur = get(r, contactHdr, field) || get(r, contactHdr, field.toLowerCase());
+  document.getElementById('edit-current').textContent = cur || '(empty)';
+  document.getElementById('edit-new').value = cur;
+}
+
+async function saveEdit() {
+  const field = document.getElementById('edit-field-sel').value;
+  const newVal = document.getElementById('edit-new').value;
+  if (!field) { showMsg('edit-msg', 'Please choose a field.', 'error'); return; }
+  if (editContactIdx < 0) { showMsg('edit-msg', 'No contact loaded.', 'error'); return; }
+
+  // Find column index in sheet
+  const ci = col(contactHdr, field);
+  if (ci < 0) { showMsg('edit-msg', 'Column not found in sheet.', 'error'); return; }
+
+  if (isDemo) {
+    contactRows[editContactIdx][ci] = newVal;
+    showMsg('edit-msg', '✓ Updated locally (demo mode).', 'success');
+    renderLedger(editContactIdx);
+    return;
+  }
+
+  // Find actual row number in sheet (header is row 1, data starts row 2)
+  const sheetRow = editContactIdx + 2;
+  const range = `${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(ci)}${sheetRow}`;
+  showMsg('edit-msg', 'Saving…', 'info');
+  try {
+    const res = await authedFetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+      { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[newVal]] }) }
+    );
+    if (!res.ok) { const d = await res.json(); showMsg('edit-msg', 'Error: ' + (d?.error?.message || res.status), 'error'); return; }
+    contactRows[editContactIdx][ci] = newVal;
+    showMsg('edit-msg', '✓ Saved to sheet!', 'success');
+    renderLedger(editContactIdx);
+  } catch (e) { showMsg('edit-msg', 'Network error: ' + e.message, 'error'); }
+}
+
+// ─── EMAIL ────────────────────────────────────────────────────────────────────
+function toggleEmailCheck(email, checked) {
+  emailCheckboxes[email] = checked;
+}
+
+function openEmailPanel() {
+  const selected = Object.entries(emailCheckboxes).filter(([, v]) => v).map(([e]) => e);
+  if (!selected.length) { alert('Please check at least one email address first.'); return; }
+  document.getElementById('email-recipients-label').textContent = 'To: ' + selected.join(', ');
+  document.getElementById('email-subject').value = '';
+  document.getElementById('email-body').value = '';
+  hideMsg('email-msg');
+  document.getElementById('email-panel').classList.add('open');
+  document.getElementById('email-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeEmailPanel() { document.getElementById('email-panel').classList.remove('open'); }
+
+async function sendEmail() {
+  const subject = (document.getElementById('email-subject').value || '').trim();
+  const body = (document.getElementById('email-body').value || '').trim();
+  if (!subject || !body) { showMsg('email-msg', 'Please enter subject and body.', 'error'); return; }
+  const selected = Object.entries(emailCheckboxes).filter(([, v]) => v).map(([e]) => e);
+  if (!selected.length) { showMsg('email-msg', 'No recipients selected.', 'error'); return; }
+
+  if (isDemo) { showMsg('email-msg', `Demo: would create ${selected.length} draft(s) to ${selected.join(', ')}.`, 'info'); return; }
+
+  showMsg('email-msg', `Creating ${selected.length} draft(s)…`, 'info');
+  let created = 0, failed = 0;
+  for (const toEmail of selected) {
+    const raw = `To: ${toEmail}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`;
+    const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    try {
+      const res = await authedFetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: { raw: encoded } })
+      });
+      if (res.ok) created++; else failed++;
+    } catch { failed++; }
+  }
+  if (created > 0) showMsg('email-msg', `✓ Created ${created} draft(s) in Gmail!${failed ? ' (' + failed + ' failed)' : ''}`, 'success');
+  else showMsg('email-msg', 'Failed to create drafts. Check Gmail API is enabled.', 'error');
+}
+
+// ─── ADD CONTACT ──────────────────────────────────────────────────────────────
+function clearAdd() {
+  ['ac-name','ac-phone','ac-email','ac-addr','ac-action','ac-date','ac-notes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  hideMsg('ac-msg');
+}
+
+async function saveNewContact() {
+  const name = (document.getElementById('ac-name').value || '').trim();
+  if (!name) { showMsg('ac-msg', 'Name is required.', 'error'); return; }
+  const maxCol = Math.max(...Object.values(contactHdr).filter(v => typeof v === 'number'), 20);
+  const newRow = Array(maxCol + 1).fill('');
+  const setF = (field, val) => { const i = col(contactHdr, field); if (i >= 0) newRow[i] = val; };
+  setF('name', name);
+  setF('category', 'Prospective');
+  setF('phone', document.getElementById('ac-phone').value || '');
+  setF('email', document.getElementById('ac-email').value || '');
+  setF('address', document.getElementById('ac-addr').value || '');
+  setF('action plan', document.getElementById('ac-action').value || '');
+  setF('action date', document.getElementById('ac-date').value || '');
+  setF('notes', document.getElementById('ac-notes').value || '');
+  if (isDemo) {
+    contactRows.push(newRow); buildIndexes();
+    showMsg('ac-msg', '✓ Added (demo mode).', 'success');
+    setTimeout(clearAdd, 1500); return;
+  }
+  showMsg('ac-msg', 'Saving…', 'info');
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.CONTACTS)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    const res = await authedFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [newRow] }) });
+    if (!res.ok) { const d = await res.json(); showMsg('ac-msg', 'Error: ' + (d?.error?.message || res.status), 'error'); return; }
+    contactRows.push(newRow); buildIndexes();
+    document.getElementById('topbar-badge').textContent = (signedInEmail || 'Live') + ' · ' + contactRows.length + ' contacts';
+    showMsg('ac-msg', '✓ Added to sheet as Prospective!', 'success');
+    setTimeout(clearAdd, 2000);
+  } catch (e) { showMsg('ac-msg', 'Network error: ' + e.message, 'error'); }
+}
+
+// ─── SYNC TAB ─────────────────────────────────────────────────────────────────
+let syncParsed = [], syncNew = [], syncSelected = new Set();
+
+function syncDrop(e) { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) loadSyncFile(f); }
+function syncFileChosen(input) { if (input.files[0]) loadSyncFile(input.files[0]); }
+
+function loadSyncFile(file) {
+  const fn = document.getElementById('sync-fname');
+  fn.textContent = '📄 ' + file.name; fn.style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = e => {
+    syncParsed = parseCSV(e.target.result);
+    showMsg('sync-msg', `✓ Loaded ${syncParsed.length} rows from ${file.name}`, 'success');
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const hdrs = parseCSVLine(lines[0]);
+  return lines.slice(1).map(l => {
+    const vals = parseCSVLine(l);
+    const obj = {};
+    hdrs.forEach((h, i) => { obj[h.trim().replace(/^\uFEFF/, '')] = (vals[i] || '').trim(); });
+    return obj;
+  }).filter(r => r.PMT_ID || r.ACT_ID);
+}
+function parseCSVLine(line) {
+  const res = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (ch === ',' && !inQ) { res.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  res.push(cur); return res;
+}
+
+async function runSync() {
+  if (!syncParsed.length) { showMsg('sync-msg', 'Please upload a CSV file first.', 'error'); return; }
+  if (isDemo) { processSyncResults(new Set(['12236', '18809'])); return; }
+  const tab = (document.getElementById('sync-tab').value || '').trim();
+  showMsg('sync-msg', 'Checking existing payments…', 'info');
+  const existing = new Set();
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}`;
+    const res = await authedFetch(url);
+    if (res.ok) { const d = await res.json(); (d.values || []).slice(1).forEach(r => { if (r[0]) existing.add(String(r[0]).trim()); }); }
+  } catch {}
+  processSyncResults(existing);
+}
+
+function processSyncResults(existing) {
+  const knownIds = new Set(contactRows.map(r => normId(get(r, contactHdr, 'accountid'))));
+  syncNew = []; const dupes = [], unknown = [];
+  syncParsed.forEach(row => {
+    const pid = String(row.PMT_ID || '').trim();
+    const aid = String(row.ACT_ID || '').trim();
+    if (existing.has(pid)) dupes.push(row);
+    else if (!knownIds.has(aid)) unknown.push(row);
+    else syncNew.push(row);
+  });
+  syncSelected = new Set(syncNew.map((_, i) => i));
+  const res = document.getElementById('sync-results');
+  res.style.display = 'block';
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--green)">${syncNew.length}</div><div style="font-size:11px;color:var(--green)">New</div></div>
+      <div style="background:var(--gray-200);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--gray-700)">${dupes.length}</div><div style="font-size:11px">Duplicate</div></div>
+      <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--amber)">${unknown.length}</div><div style="font-size:11px;color:var(--amber)">Unknown</div></div>
+    </div>
+    ${syncNew.length ? `
+    <div class="card">
+      <div class="section-head">🟢 New payments to add</div>
+      ${syncNew.map((row, i) => `
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200);cursor:pointer">
+          <input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" style="accent-color:var(--blue)" />
+          <div style="flex:1;font-size:12px">
+            <div style="font-weight:600">${row.SystemDisplay1 || row.ACT_ID}</div>
+            <div style="color:var(--gray-500)">${row.PMT_DateNoTime || row.Date || ''} · $${parseFloat(row.AppliedAmount || 0).toLocaleString()} ${row.CUR_Code || 'USD'} · ${row.AppliedTo || ''}</div>
+          </div>
+        </label>`).join('')}
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="syncApprove()">Add selected to sheet</button>
+      </div>
+      <div id="sync-write-msg" class="msg"></div>
+    </div>` : '<div class="card" style="font-size:13px;color:var(--gray-500)">No new payments found.</div>'}
+    ${unknown.length ? `<div class="card"><div class="section-head">🟡 Unknown contacts (${unknown.length})</div>${unknown.slice(0,10).map(r => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-200)"><b>${r.SystemDisplay1||r.ACT_ID}</b> · ${r.PMT_DateNoTime||''} · $${parseFloat(r.AppliedAmount||0).toLocaleString()}</div>`).join('')}${unknown.length>10?`<div style="font-size:11px;color:var(--gray-500);padding-top:6px">…and ${unknown.length-10} more</div>`:''}</div>` : ''}
+  `;
+  hideMsg('sync-msg');
+}
+
+async function syncApprove() {
+  const toAdd = syncNew.filter(r => !r._skip);
+  if (!toAdd.length) { showMsg('sync-write-msg', 'Nothing selected.', 'error'); return; }
+  const tab = (document.getElementById('sync-tab').value || '').trim();
+  if (isDemo) { showMsg('sync-write-msg', `Demo: would add ${toAdd.length} payment(s) to "${tab}".`, 'info'); return; }
+  showMsg('sync-write-msg', `Adding ${toAdd.length} rows…`, 'info');
+  const newRows = toAdd.map(row => {
+    const amt = parseFloat(row.AppliedAmount || 0);
+    const rate = parseFloat(row.PMT_ExchangeRate || 1);
+    const usd = row.CUR_Code === 'USD' ? amt : (rate > 0 ? +(amt / rate).toFixed(2) : '');
+    return [row.PMT_ID, row.ACT_ID, row.PMT_DateNoTime || row.Date, amt, row.CUR_Code || 'USD', row.PMT_ExchangeRate || '', usd, row.Method || '', row.AppliedTo || '', row.LTT_Description || '', 'Admire Sync', row.PmtNotes || ''];
+  });
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    const res = await authedFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: newRows }) });
+    if (!res.ok) { const d = await res.json(); showMsg('sync-write-msg', 'Error: ' + (d?.error?.message || res.status), 'error'); return; }
+    showMsg('sync-write-msg', `✓ Added ${toAdd.length} payment(s)!`, 'success');
+  } catch (e) { showMsg('sync-write-msg', 'Network error: ' + e.message, 'error'); }
+}
+
+function clearSync() {
+  syncParsed = []; syncNew = []; syncSelected = new Set();
+  document.getElementById('sync-file').value = '';
+  document.getElementById('sync-fname').style.display = 'none';
+  document.getElementById('sync-results').style.display = 'none';
+  document.getElementById('sync-msg').style.display = 'none';
+}
+
+// ─── DEMO MODE ────────────────────────────────────────────────────────────────
+function loadDemo() {
+  isDemo = true;
+  // Build minimal demo data matching the real schema
+  contactHdr = hdr(['AccountID','Name','Category','Address','Phone','Email','Lifetime Giving (if Donor 4k+)','Parent Of','Raw Association Tags','Data Source','Giving Category','Giving Pattern','Action Plan','Action Date','Notes','Future Pledge Yrs','Future Pledge Amt','Total Commitment','Faulty Phone or Address','Yahrtzeit For','Yahrtzeit']);
+  contactRows = [
+    ['9921','ADLER, Jonathan and Leah','Donor (4k+)','388 Maitland Avenue, Teaneck, NJ 07666','(917) 697-9369','leahadler1@yahoo.com','$46,500','','','Donor Master','ACTIVE_LOYAL','Gave 13 years','Call re: dedication','July 2026','Strong supporter. Interested in naming.','2027, 2028','$5,000','$51,500','','',''],
+    ['8607','BERMAN, Ann','Donor (4k+)','3212 Northbrook Road, Baltimore, MD 21208','(410) 258-3630','savtaberman@gmail.com','$26,420','','','Donor Master','ACTIVE_CONSISTENT','Gave 15 years','','','','','0','$26,420','','',''],
+    ['3243','BERMAN, Ben and Elizabeth','Donor (4k+); Student/Alumni','4333 North Jefferson Avenue, Miami Beach, FL 33140','(301) 512-4069','benberman@bermanenterprises.com','$169,264','','','Donor Master','ACTIVE_LOYAL','Gave 16 years','Get dedication text!','','and what else?','','0','$169,264','','',''],
+  ];
+  donOvHdr = hdr(['AccountID','Name','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026','Lifetime Giving','First Gift Year','Last Gift Year','Years Given','Largest Gift','Largest Gift Year','Last Gift Amount','Giving Category','Giving Pattern','Future Pledge Yrs','Future Pledge Amt']);
+  donOvRows = [
+    ['9921','ADLER, Jonathan and Leah',0,0,500,0,3500,0,1000,0,1000,0,0,2000,0,0,1000,0,1000,0,1000,1800,3600,10400,9700,0,10000,0,'46500','2004','2026','13','10400','2023','10000','ACTIVE_LOYAL','Gave 13 years','2027, 2028','5000'],
+    ['8607','BERMAN, Ann',0,0,1000,750,3000,2500,2500,2500,0,1000,860,5000,5000,0,50,180,0,0,0,180,0,100,0,1800,0,0,'26420','2004','2025','15','5000','2013','1800','ACTIVE_CONSISTENT','Gave 15 years','','0'],
+    ['3243','BERMAN, Ben and Elizabeth',0,0,0,0,0,10000,200,0,0,0,500,3000,6500,10600,0,10180,10000,10000,10000,24200,23600,19650,16667,4167,10000,0,'169264','2007','2026','16','24200','2021','10000','ACTIVE_LOYAL','Gave 16 years','','0'],
+  ];
+  studentHdr = hdr(['AccountID','Name','ProgramHistory','MostRecentYear','MostRecentProgram','Status','MilitaryStatus','PostProgram','StaffRole','HousingTag','SOL_Rav','Parent_Name','Address','City','State','Phone1','Phone2','Email','Parent_AccountID','MatchConfidence','hesder','did idf through LLC','llc housing starting date','llc housing ending date']);
+  studentRows = [];
+  dedHdr = hdr(['Account ID','TODO','Donor Name','Total Commitment','Dedication Item','Notes','Status','Dedication Text','Notes2','Flags']);
+  dedRows = [
+    ['9921','','ADLER, Jonathan and Leah','$46,500','Stone Wall','','Hung','In memory of Moshe ben Yosef z"l','',''],
+    ['3243','','BERMAN, Ben and Elizabeth','$169,264','Administrative Office','Need to confirm text','Not Hung','','','NEEDS TEXT'],
+  ];
+  relHdr = hdr(['RelationshipID','PersonA_AccountID','PersonA_Name','RelationshipType','PersonB_AccountID','PersonB_Name','Birthday','Anniversary']);
+  relRows = [
+    ['1','9921','ADLER, Jonathan and Leah','Wife of','','Leah Adler','','June 15, 2003'],
+  ];
+  tuiOvHdr = hdr(['AccountID','Name','(No Year) Tutoring','2023/24 Tuition','2024/25 Registration','2024/25 Tuition','Subtotal Tuition Paid','Total Tuittion Paid']);
+  tuiOvRows = [];
+  detailLoaded = true; donDetRows = []; tuiDetRows = [];
+  buildIndexes();
+  goLive();
+}
+</script>
+</body>
+</html>
