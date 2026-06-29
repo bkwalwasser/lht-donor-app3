@@ -402,20 +402,6 @@ select.form-input{cursor:pointer}
 
 <script>
 
-// Section field definitions for section-level edit pencils
-const SECTION_FIELDS = {
-  contact: [
-    {label:'Phone', key:'phone'}, {label:'Address', key:'address'},
-    {label:'Email', key:'email'}, {label:'Faulty Phone or Address', key:'faulty phone or address'}
-  ],
-  giving: [
-    {label:'Giving Category', key:'giving category'}, {label:'Action Plan', key:'action plan'},
-    {label:'Action Date', key:'action date'}, {label:'Notes', key:'notes'},
-    {label:'Future Pledge Yrs', key:'future pledge yrs'}, {label:'Future Pledge Amt', key:'future pledge amt'},
-    {label:'Total Commitment', key:'total commitment'}
-  ],
-};
-
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const CLIENT_ID = '951254535664-gumkta7ekgdnnv2nuk6iqhi5ohpofpke.apps.googleusercontent.com';
 const SCOPES = [
@@ -769,31 +755,23 @@ function goBack(){
 // Section-specific edit fields
 const SECTION_FIELDS={
   contact:[
-    {label:'Phone',key:'Phone'},
-    {label:'Address',key:'Address'},
-    {label:'Email',key:'Email'},
-    {label:'Faulty Phone or Address',key:'Faulty Phone or Address'},
+    {label:'Phone',key:'phone'},{label:'Address',key:'address'},
+    {label:'Email',key:'email'},{label:'Faulty Phone or Address',key:'faulty phone or address'}
   ],
   giving:[
-    {label:'Giving Category',key:'Giving Category'},
-    {label:'Action Plan',key:'Action Plan'},
-    {label:'Action Date',key:'Action Date'},
-    {label:'Notes',key:'Notes'},
-    {label:'Future Pledge Yrs',key:'Future Pledge Yrs'},
-    {label:'Future Pledge Amt',key:'Future Pledge Amt'},
+    {label:'Giving Category',key:'giving category'},{label:'Action Plan',key:'action plan'},
+    {label:'Action Date',key:'action date'},{label:'Notes',key:'notes'},
+    {label:'Future Pledge Yrs',key:'future pledge yrs'},{label:'Future Pledge Amt',key:'future pledge amt'},
+    {label:'Total Commitment',key:'total commitment'}
   ],
   general:[
-    {label:'Giving Category',key:'Giving Category'},
-    {label:'Action Plan',key:'Action Plan'},
-    {label:'Action Date',key:'Action Date'},
-    {label:'Notes',key:'Notes'},
-    {label:'Future Pledge Yrs',key:'Future Pledge Yrs'},
-    {label:'Future Pledge Amt',key:'Future Pledge Amt'},
-    {label:'Phone',key:'Phone'},
-    {label:'Address',key:'Address'},
-    {label:'Email',key:'Email'},
-    {label:'Faulty Phone or Address',key:'Faulty Phone or Address'},
-  ],
+    {label:'Giving Category',key:'giving category'},{label:'Action Plan',key:'action plan'},
+    {label:'Action Date',key:'action date'},{label:'Notes',key:'notes'},
+    {label:'Future Pledge Yrs',key:'future pledge yrs'},{label:'Future Pledge Amt',key:'future pledge amt'},
+    {label:'Total Commitment',key:'total commitment'},{label:'Phone',key:'phone'},
+    {label:'Address',key:'address'},{label:'Email',key:'email'},
+    {label:'Faulty Phone or Address',key:'faulty phone or address'}
+  ]
 };
 
 function renderLedger(idx){
@@ -887,7 +865,7 @@ function renderLedger(idx){
 
   // Helper for section edit button
   function secEditBtn(section){
-    return`<button class="sec-edit-btn" onclick="openEdit('${section}')">✏️ Edit</button>`;
+    return`<button class="sec-edit-btn" onclick="openEditSection('${section}')">✏️ Edit</button>`;
   }
 
   const html=`
@@ -1062,7 +1040,7 @@ function renderDetailTable(rows,hdrObj,keys,labels){
 // ─── EDIT (SECTION-AWARE) ─────────────────────────────────────────────────────
 let editContactIdx=-1;
 
-function openEdit(section){
+function openEditSection(section){
   editContactIdx=currentContactIdx;
   const fields=SECTION_FIELDS[section]||SECTION_FIELDS.general;
   const sel=document.getElementById('edit-field-sel');
