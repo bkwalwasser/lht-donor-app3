@@ -398,7 +398,7 @@ select.form-input{cursor:pointer}
         <div class="q-section-head" onclick="toggleQSection('qs')">Solicitor <span id="qs-arrow">▾</span></div>
         <div class="q-section-body" id="qs-body">
           <div class="sol-wrap">
-            <input class="form-input" id="sol-search" placeholder="Type to search solicitors…" oninput="onSolSearch(this.value)" autocomplete="off" />
+            <input class="form-input" id="sol-search" placeholder="Type to search solicitors…" oninput="onSolSearch(this.value)" onfocus="onSolFocus()" autocomplete="off" />
             <div class="sol-dropdown" id="sol-dropdown"></div>
           </div>
           <div class="sol-chips" id="sol-chips"></div>
@@ -546,6 +546,70 @@ select.form-input{cursor:pointer}
         </div>
       </div>
 
+      <!-- COLUMNS TO SHOW -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qcols')">📋 Columns to Show <span id="qcols-arrow">▾</span></div>
+        <div class="q-section-body" id="qcols-body">
+          <div style="font-size:11px;color:var(--gray-500);margin-bottom:6px">Name is always shown. Check additional columns:</div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:6px 0 3px">Identity</div>
+          <div class="cb-group">
+            <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="category" checked onchange="updateChip(this)"> Contact Type</label>
+            <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="givingcat" checked onchange="updateChip(this)"> Giving Category</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="accountid" onchange="updateChip(this)"> Account ID</label>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Contact Info</div>
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="phone" onchange="updateChip(this)"> Phone</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="email" onchange="updateChip(this)"> Email</label>
+            <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="state" checked onchange="updateChip(this)"> State</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="address" onchange="updateChip(this)"> Full Address</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="faulty" onchange="updateChip(this)"> Faulty Flag</label>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Solicitor &amp; Action</div>
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="sol1" onchange="updateChip(this)"> Solicitor 1</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="sol2" onchange="updateChip(this)"> Solicitor 2</label>
+            <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="actionplan" checked onchange="updateChip(this)"> Action Plan</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="actiondate" onchange="updateChip(this)"> Action Month/Year</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="notes" onchange="updateChip(this)"> Notes</label>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Giving / Finance</div>
+          <div class="cb-group">
+            <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="lifetime" checked onchange="updateChip(this)"> Lifetime Giving</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="lastgift" onchange="updateChip(this)"> Last Gift Amt</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="lastyear" onchange="updateChip(this)"> Last Gift Year</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="yrsgiving" onchange="updateChip(this)"> Years Given</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="largest" onchange="updateChip(this)"> Largest Gift</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="commitment" onchange="updateChip(this)"> Total Commitment</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="futureamt" onchange="updateChip(this)"> Future Pledge</label>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Dedication</div>
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="deditem" onchange="updateChip(this)"> Ded. Item</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="dedstatus" onchange="updateChip(this)"> Ded. Status</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="dedtext" onchange="updateChip(this)"> Has Ded. Text</label>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Student / Army</div>
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="program" onchange="updateChip(this)"> Recent Program</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="programyr" onchange="updateChip(this)"> Program Year</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="military" onchange="updateChip(this)"> Military Status</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="housing" onchange="updateChip(this)"> LLC Housing</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="postprog" onchange="updateChip(this)"> Post-Program</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="hesder" onchange="updateChip(this)"> Hesder</label>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Relationships</div>
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parent" onchange="updateChip(this)"> Parent Name &amp; Phone</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="spouse" onchange="updateChip(this)"> Spouse/Partner</label>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Other</div>
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="yahrtzeit" onchange="updateChip(this)"> Yahrtzeit</label>
+          </div>
+        </div>
+      </div>
+
       <div class="q-run-bar">
         <button class="btn btn-primary" id="q-run-btn" onclick="runQuery()">Run Query</button>
         <button class="btn" onclick="clearQuery()">Clear All</button>
@@ -554,14 +618,26 @@ select.form-input{cursor:pointer}
     <div id="q-results" style="display:none;margin-top:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
         <div class="qcount" id="q-count"></div>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="downloadQueryCSV()" title="Download as CSV">⬇️ CSV</button>
           <button class="btn btn-sm" id="q-email-btn" onclick="openQueryEmailPanel()" title="Email these contacts">✉️ Email</button>
         </div>
       </div>
+      <!-- Group edit bar (shown when rows selected) -->
+      <div id="q-group-bar" style="display:none;background:var(--navy);color:white;border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+        <span id="q-sel-count" style="font-size:13px;font-weight:600"></span>
+        <select class="form-input" id="q-grp-field" style="flex:1;min-width:140px;font-size:13px">
+          <option value="">— choose field to edit —</option>
+        </select>
+        <input class="form-input" id="q-grp-val" placeholder="New value…" style="flex:1;min-width:120px;font-size:13px;display:none" />
+        <select class="form-input" id="q-grp-sel" style="flex:1;min-width:140px;font-size:13px;display:none"></select>
+        <button class="btn btn-primary btn-sm" onclick="applyGroupEdit()">Apply to selected</button>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.3);color:white" onclick="clearQSelection()">Clear</button>
+        <div id="q-grp-msg" style="font-size:12px;width:100%"></div>
+      </div>
       <div style="overflow-x:auto;background:white;border-radius:var(--radius);border:1px solid var(--gray-200)">
-        <table class="qresult-tbl">
-          <thead><tr><th>Name</th><th>Type</th><th>Category</th><th>State</th><th>Lifetime</th><th>Action</th></tr></thead>
+        <table class="qresult-tbl" id="q-result-table">
+          <thead id="q-thead"><tr></tr></thead>
           <tbody id="q-tbody"></tbody>
         </table>
       </div>
@@ -1017,19 +1093,44 @@ function openRelLedger(acctId) {
 function doSearch(q){
   const area=document.getElementById('results-area');
   if(!q.trim()){area.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Start typing to search</div></div>';return;}
-  const hits=searchContacts(q);
+  const terms=q.toLowerCase().split(/\s+/);
+  const matches=hay=>terms.every(t=>hay.includes(t));
+  function scoreHay(hay){
+    return terms.reduce((s,t)=>{
+      const wm=new RegExp('(^|[^a-z])'+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(hay);
+      return s+(wm?2:1);
+    },0);
+  }
+  const hits=[];
+  contactRows.forEach((r,i)=>{
+    const name=get(r,contactHdr,'name');
+    const addr=get(r,contactHdr,'address');
+    const email=get(r,contactHdr,'email');
+    const id=get(r,contactHdr,'accountid');
+    const hay=[name,addr,email,id].join(' ').toLowerCase();
+    if(!matches(hay))return;
+    const cat=get(r,contactHdr,'giving category');
+    const life=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+    const city=(addr||'').split(',').slice(1,3).join(',').trim();
+    const acctIdS=normId(get(r,contactHdr,'accountid'));
+    const ownSIs=studentByAcct.get(acctIdS)||[];
+    const childSIs=studentByAcct.get('p:'+acctIdS)||[];
+    let studentSub='';
+    const allSIs=[...ownSIs,...childSIs];
+    if(allSIs.length){
+      const si=allSIs[0];const sr=studentRows[si];
+      const prog=get(sr,studentHdr,'mostrecentprogram');
+      const yr=get(sr,studentHdr,'mostrecentyear');
+      const mil=get(sr,studentHdr,'militarystatus');
+      const parts=[prog&&yr?prog+' ('+yr+')':prog,mil].filter(Boolean);
+      if(parts.length)studentSub='🎓 '+parts.join(' · ');
+    }
+    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · '),studentSub,sc:scoreHay(hay)});
+  });
   if(!hits.length){area.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No results found</div></div>';return;}
-  area.innerHTML=hits.slice(0,15).map(h=>`
-    <div class="result-item" onclick="openLedger(${h.i})">
-      <div class="avatar ${avatarCls(h.cat)}">${initials(h.name)}</div>
-      <div style="flex:1;min-width:0">
-        <div class="result-name">${h.name}</div>
-        <div class="result-sub">${h.sub||'—'}</div>
-      </div>
-      <span style="color:var(--gray-300);font-size:18px">›</span>
-    </div>`).join('');
+  hits.sort((a,b)=>b.sc-a.sc);
+  area.innerHTML=hits.slice(0,50).map(h=>`<div class="result-item" onclick="openLedger(${h.i})"><div class="avatar ${avatarCls(h.cat)}">${initials(h.name)}</div><div style="flex:1;min-width:0"><div class="result-name">${h.name}</div><div class="result-sub">${h.sub||'—'}</div>${h.studentSub?`<div class="result-item-sub">${h.studentSub}</div>`:''}</div><span style="color:var(--gray-300);font-size:18px">›</span></div>`).join('');
 }
-
 function searchContacts(q){
   const terms=q.toLowerCase().split(/\s+/);
   const matches=hay=>terms.every(t=>hay.includes(t));
@@ -1557,12 +1658,17 @@ function buildSolList(){
 }
 function onSolSearch(q){
   const drop=document.getElementById('sol-dropdown');
-  if(!q.trim()){drop.style.display='none';return;}
-  const all=buildSolList().filter(s=>s.toLowerCase().includes(q.toLowerCase())).slice(0,15);
-  if(!all.length){drop.style.display='none';return;}
-  drop.innerHTML=all.map(s=>`<div class="sol-option" onclick="selectSolicitor('${s.replace(/'/g,"\'")}')"> ${s}</div>`).join('');
+  const all=buildSolList();
+  if(!all.length){
+    drop.innerHTML='<div style="padding:10px;font-size:12px;color:var(--gray-500)">No solicitors found yet — populate Solicitor 1 or Solicitor 2 columns in All Contacts.</div>';
+    drop.style.display='block';return;
+  }
+  const filtered=q.trim()?all.filter(s=>s.toLowerCase().includes(q.toLowerCase())):all;
+  if(!filtered.length){drop.innerHTML='<div style="padding:10px;font-size:12px;color:var(--gray-500)">No match.</div>';drop.style.display='block';return;}
+  drop.innerHTML=filtered.slice(0,40).map(s=>`<div class="sol-option" onclick="selectSolicitor('${s.replace(/'/g,"\\'")}')"> ${s}</div>`).join('');
   drop.style.display='block';
 }
+function onSolFocus(){onSolSearch(document.getElementById('sol-search').value||'');}
 function selectSolicitor(name){
   selectedSolicitors.add(name);
   document.getElementById('sol-search').value='';
@@ -1915,20 +2021,261 @@ function _doRunQuery(){
   });
 
   lastQueryResults=results;
+  renderQueryResults(results);
+}
+
+// ── Column definitions ────────────────────────────────────────────────────────
+const Q_COL_DEFS={
+  category:   {label:'Type',        fn:(r,x)=>x.category||'—'},
+  givingcat:  {label:'Category',    fn:(r,x)=>x.cat?`<span class="hero-pill ${pillCls(x.cat)}" style="font-size:10px;margin:0">${pillLabel(x.cat)}</span>`:'—'},
+  accountid:  {label:'Account ID',  fn:(r,x)=>get(r,contactHdr,'accountid')},
+  phone:      {label:'Phone',       fn:(r,x)=>get(r,contactHdr,'phone')},
+  email:      {label:'Email',       fn:(r,x)=>get(r,contactHdr,'email')},
+  state:      {label:'State',       fn:(r,x)=>x.state||'—'},
+  address:    {label:'Address',     fn:(r,x)=>get(r,contactHdr,'address')},
+  faulty:     {label:'Faulty',      fn:(r,x)=>get(r,contactHdr,'faulty phone or address')},
+  sol1:       {label:'Solicitor 1', fn:(r,x)=>get(r,contactHdr,'solicitor 1')},
+  sol2:       {label:'Solicitor 2', fn:(r,x)=>get(r,contactHdr,'solicitor 2')},
+  actionplan: {label:'Action Plan', fn:(r,x)=>get(r,contactHdr,'action plan')},
+  actiondate: {label:'Action Date', fn:(r,x)=>{const m=get(r,contactHdr,'action month');const y=get(r,contactHdr,'action year');return m?(m==='All Months'?'🔁 All Months':(['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]||m))+(y?' '+y:''):''}},
+  notes:      {label:'Notes',       fn:(r,x)=>get(r,contactHdr,'notes')},
+  lifetime:   {label:'Lifetime',    fn:(r,x)=>x.lifetime?fmt$(x.lifetime):'—'},
+  lastgift:   {label:'Last Gift',   fn:(r,x)=>{const d=donOvByAcct.get(normId(get(r,contactHdr,'accountid')));return d!==undefined?fmt$(get(donOvRows[d],donOvHdr,'last gift amount')):''}},
+  lastyear:   {label:'Last Yr',     fn:(r,x)=>{const d=donOvByAcct.get(normId(get(r,contactHdr,'accountid')));return d!==undefined?get(donOvRows[d],donOvHdr,'last gift year'):''}},
+  yrsgiving:  {label:'Yrs Given',   fn:(r,x)=>{const d=donOvByAcct.get(normId(get(r,contactHdr,'accountid')));return d!==undefined?get(donOvRows[d],donOvHdr,'years given'):''}},
+  largest:    {label:'Largest',     fn:(r,x)=>{const d=donOvByAcct.get(normId(get(r,contactHdr,'accountid')));return d!==undefined?fmt$(get(donOvRows[d],donOvHdr,'largest gift')):''}},
+  commitment: {label:'Commitment',  fn:(r,x)=>fmt$(get(r,contactHdr,'total commitment'))},
+  futureamt:  {label:'Future Pledge',fn:(r,x)=>fmt$(get(r,contactHdr,'future pledge amt'))},
+  deditem:    {label:'Ded. Item',   fn:(r,x)=>{const ids=dedByAcct.get(normId(get(r,contactHdr,'accountid')))||[];return ids.length?get(dedRows[ids[0]],dedHdr,'dedication item'):''}},
+  dedstatus:  {label:'Ded. Status', fn:(r,x)=>{const ids=dedByAcct.get(normId(get(r,contactHdr,'accountid')))||[];return ids.map(di=>get(dedRows[di],dedHdr,'status')).join(', ')}},
+  dedtext:    {label:'Has Text',    fn:(r,x)=>{const ids=dedByAcct.get(normId(get(r,contactHdr,'accountid')))||[];return ids.length?(ids.some(di=>(get(dedRows[di],dedHdr,'dedication text')||'').trim())?'✓ Yes':'✗ No'):''}},
+  program:    {label:'Program',     fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.length?get(studentRows[sis[0]],studentHdr,'mostrecentprogram'):''}},
+  programyr:  {label:'Prog. Year',  fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.length?get(studentRows[sis[0]],studentHdr,'mostrecentyear'):''}},
+  military:   {label:'Military',    fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'militarystatus')).filter(Boolean).join(', ')}},
+  housing:    {label:'Housing',     fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'housingtag')).filter(Boolean).join(', ')}},
+  postprog:   {label:'Post-Prog',   fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'postprogram')).filter(Boolean).join(', ')}},
+  hesder:     {label:'Hesder',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'hesder')).filter(Boolean).join(', ')}},
+  parent:     {label:'Parent',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('parent')||rt.includes('father')||rt.includes('mother')){const on=get(rr,relHdr,isA?'personb_name':'persona_name');const oid=normId(get(rr,relHdr,isA?'personb_accountid':'persona_accountid'));const ci2=contactByAcct.get(oid);const ph=ci2!==undefined?get(contactRows[ci2],contactHdr,'phone'):'';out+=on+(ph?' ('+ph+')':'');}});return out}},
+  spouse:     {label:'Spouse',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('spouse')||rt.includes('wife')||rt.includes('husband')||rt.includes('partner')){out=get(rr,relHdr,isA?'personb_name':'persona_name');}});return out}},
+  yahrtzeit:  {label:'Yahrtzeit',   fn:(r,x)=>(get(r,contactHdr,'yahrtzeit')||'')+(get(r,contactHdr,'yahrtzeit for')?' · '+get(r,contactHdr,'yahrtzeit for'):'')},
+};
+
+let qSelectedRows=new Set(); // set of result indices (into lastQueryResults)
+
+function getActiveCols(){
+  return [...document.querySelectorAll('.q-col-cb:checked')].map(cb=>cb.value);
+}
+
+function renderQueryResults(results){
+  const cols=getActiveCols();
+  // Build header
+  const thead=document.getElementById('q-thead');
+  const colCount=cols.length+3; // checkbox + name + cols + edit
+  thead.innerHTML='<tr>'+
+    '<th style="width:32px"><input type="checkbox" id="q-sel-all" onchange="toggleSelectAll(this.checked)" style="accent-color:var(--blue)"></th>'+
+    '<th>Name</th>'+
+    cols.map(c=>'<th>'+(Q_COL_DEFS[c]?Q_COL_DEFS[c].label:c)+'</th>').join('')+
+    '<th style="width:36px"></th>'+
+    '</tr>';
 
   const tbody=document.getElementById('q-tbody');
   document.getElementById('q-count').textContent=results.length+' contact'+(results.length===1?'':'s')+' found';
-  tbody.innerHTML=results.slice(0,200).map(({i,name,cat,category,state,lifetime,action})=>`
-    <tr onclick="openLedger(${i})">
-      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</td>
-      <td style="font-size:11px;color:var(--gray-500);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${category||'—'}</td>
-      <td><span class="hero-pill ${pillCls(cat)}" style="font-size:10px;margin:0">${cat?pillLabel(cat):'—'}</span></td>
-      <td style="font-size:11px">${state||'—'}</td>
-      <td style="font-size:11px;color:var(--blue);font-weight:600">${lifetime?fmt$(lifetime):'—'}</td>
-      <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${action||'—'}</td>
-    </tr>`).join('');
-  if(results.length>200) tbody.innerHTML+=`<tr><td colspan="6" style="text-align:center;padding:10px;font-size:12px;color:var(--gray-500)">Showing first 200 of ${results.length}. Refine filters to narrow down.</td></tr>`;
+  const shown=results.slice(0,200);
+  tbody.innerHTML=shown.map((x,ri)=>{
+    const r=contactRows[x.i];
+    const cells=cols.map(c=>{
+      const def=Q_COL_DEFS[c];
+      const val=def?def.fn(r,x):'';
+      return '<td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+String(val).replace(/"/g,'&quot;')+'">'+val+'</td>';
+    }).join('');
+    return `<tr id="qrow-${ri}" onclick="qRowClick(event,${ri})">
+      <td onclick="event.stopPropagation()"><input type="checkbox" class="q-row-cb" data-ri="${ri}" onchange="onQRowCheck(this)" style="accent-color:var(--blue)"></td>
+      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.name}</td>
+      ${cells}
+      <td onclick="event.stopPropagation()"><button class="sec-edit-btn" onclick="openQRowEdit(${ri})" title="Edit this contact">✏️</button></td>
+    </tr>`;
+  }).join('');
+  if(results.length>200) tbody.innerHTML+=`<tr><td colspan="${colCount}" style="text-align:center;padding:10px;font-size:12px;color:var(--gray-500)">Showing first 200 of ${results.length}. Refine filters.</td></tr>`;
   document.getElementById('q-results').style.display='block';
+  qSelectedRows.clear();
+  updateGroupBar();
+  // Update group field dropdown to match chosen cols
+  updateGroupFieldDropdown(cols);
+}
+
+function qRowClick(e,ri){
+  // clicking row opens ledger
+  openLedger(lastQueryResults[ri].i);
+}
+
+function toggleSelectAll(checked){
+  document.querySelectorAll('.q-row-cb').forEach(cb=>{
+    cb.checked=checked;
+    const ri=parseInt(cb.dataset.ri);
+    if(checked)qSelectedRows.add(ri);else qSelectedRows.delete(ri);
+    const row=document.getElementById('qrow-'+ri);
+    if(row)row.style.background=checked?'var(--blue-light)':'';
+  });
+  updateGroupBar();
+}
+
+function onQRowCheck(cb){
+  const ri=parseInt(cb.dataset.ri);
+  if(cb.checked){qSelectedRows.add(ri);}else{qSelectedRows.delete(ri);}
+  const row=document.getElementById('qrow-'+ri);
+  if(row)row.style.background=cb.checked?'var(--blue-light)':'';
+  updateGroupBar();
+  // uncheck select-all if any unchecked
+  const all=document.querySelectorAll('.q-row-cb');
+  const allChecked=[...all].every(c=>c.checked);
+  const selAll=document.getElementById('q-sel-all');
+  if(selAll)selAll.checked=allChecked;
+}
+
+function updateGroupBar(){
+  const bar=document.getElementById('q-group-bar');
+  const cnt=document.getElementById('q-sel-count');
+  if(qSelectedRows.size>0){
+    bar.style.display='flex';
+    cnt.textContent=qSelectedRows.size+' selected';
+  }else{
+    bar.style.display='none';
+  }
+}
+
+function clearQSelection(){
+  qSelectedRows.clear();
+  document.querySelectorAll('.q-row-cb').forEach(cb=>{cb.checked=false;});
+  const selAll=document.getElementById('q-sel-all');if(selAll)selAll.checked=false;
+  document.querySelectorAll('#q-tbody tr').forEach(tr=>tr.style.background='');
+  document.getElementById('q-group-bar').style.display='none';
+}
+
+// Map col keys to editable sheet fields (key → {label, sheetKey, type})
+const Q_EDIT_FIELDS={
+  sol1:       {label:'Solicitor 1',    sheetKey:'solicitor 1',    type:'sol'},
+  sol2:       {label:'Solicitor 2',    sheetKey:'solicitor 2',    type:'sol'},
+  actionplan: {label:'Action Plan',    sheetKey:'action plan',    type:'text'},
+  actiondate: {label:'Action Month',   sheetKey:'action month',   type:'month'},
+  notes:      {label:'Notes',          sheetKey:'notes',          type:'text'},
+  givingcat:  {label:'Giving Category',sheetKey:'giving category',type:'cat'},
+  dedstatus:  {label:'Ded. Status',    sheetKey:null,             type:'dedstatus'}, // handled separately
+  faulty:     {label:'Faulty Flag',    sheetKey:'faulty phone or address', type:'text'},
+  phone:      {label:'Phone',          sheetKey:'phone',          type:'text'},
+  email:      {label:'Email',          sheetKey:'email',          type:'text'},
+  address:    {label:'Address',        sheetKey:'address',        type:'text'},
+};
+
+function updateGroupFieldDropdown(cols){
+  const sel=document.getElementById('q-grp-field');
+  sel.innerHTML='<option value="">— choose field to edit —</option>';
+  cols.forEach(c=>{
+    const ef=Q_EDIT_FIELDS[c];
+    if(ef){
+      const o=document.createElement('option');
+      o.value=c;o.textContent=ef.label;sel.appendChild(o);
+    }
+  });
+}
+
+document.addEventListener('change',function(e){
+  if(e.target.id==='q-grp-field') onGroupFieldChange(e.target.value);
+});
+
+function onGroupFieldChange(fkey){
+  const ef=Q_EDIT_FIELDS[fkey];
+  const valEl=document.getElementById('q-grp-val');
+  const selEl=document.getElementById('q-grp-sel');
+  if(!ef){valEl.style.display='none';selEl.style.display='none';return;}
+  const MONTHS=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  if(ef.type==='text'){
+    valEl.style.display='block';valEl.placeholder='New value…';selEl.style.display='none';
+  } else if(ef.type==='cat'){
+    valEl.style.display='none';selEl.style.display='block';
+    selEl.innerHTML='<option value="">— choose —</option>'+['ACTIVE_LOYAL','ACTIVE_CONSISTENT','RECENTLY_LAPSED','LAPSED_REENGAGEABLE','LAPSED_LONG','ONE_TIME','SPORADIC','PROSPECTIVE'].map(c=>`<option value="${c}">${c.replace(/_/g,' ')}</option>`).join('');
+  } else if(ef.type==='month'){
+    valEl.style.display='none';selEl.style.display='block';
+    selEl.innerHTML='<option value="">— none —</option><option value="All Months">All Months</option>'+
+      MONTHS.slice(1).map((m,i)=>`<option value="${i+1}">${i+1} – ${m}</option>`).join('');
+  } else if(ef.type==='sol'){
+    valEl.style.display='block';valEl.placeholder='Type solicitor name…';selEl.style.display='none';
+  } else if(ef.type==='dedstatus'){
+    valEl.style.display='none';selEl.style.display='block';
+    selEl.innerHTML='<option value="">— choose —</option>'+['Hung','Not Hung','In Progress','Ordered'].map(s=>`<option value="${s}">${s}</option>`).join('');
+  }
+}
+
+async function applyGroupEdit(){
+  const fkey=document.getElementById('q-grp-field').value;
+  const ef=Q_EDIT_FIELDS[fkey];
+  if(!ef){document.getElementById('q-grp-msg').textContent='Please choose a field.';return;}
+  const valEl=document.getElementById('q-grp-val');
+  const selEl=document.getElementById('q-grp-sel');
+  const newVal=(ef.type==='text'||ef.type==='sol')?valEl.value.trim():selEl.value;
+  if(!newVal){document.getElementById('q-grp-msg').textContent='Please enter a value.';return;}
+  const targets=[...qSelectedRows].map(ri=>lastQueryResults[ri]).filter(Boolean);
+  if(!targets.length){document.getElementById('q-grp-msg').textContent='Nothing selected.';return;}
+  document.getElementById('q-grp-msg').textContent='Saving '+targets.length+' record(s)…';
+  if(isDemo){
+    document.getElementById('q-grp-msg').textContent='Demo: would update '+targets.length+' record(s).';return;
+  }
+  let ok=0,fail=0;
+  if(ef.type==='dedstatus'){
+    // Write to Dedications tab
+    const statusCol=col(dedHdr,'status');
+    for(const x of targets){
+      const acctId=normId(get(contactRows[x.i],contactHdr,'accountid'));
+      const dis=dedByAcct.get(acctId)||[];
+      for(const di of dis){
+        const range=`${encodeURIComponent(TAB.DEDICATIONS)}!${colToLetter(statusCol)}${di+2}`;
+        try{
+          const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+            {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newVal]]})});
+          if(res.ok){dedRows[di][statusCol]=newVal;ok++;}else fail++;
+        }catch{fail++;}
+      }
+    }
+  } else {
+    // Write to All contacts
+    const ci2=col(contactHdr,ef.sheetKey);
+    if(ci2<0){document.getElementById('q-grp-msg').textContent='Column not found in sheet.';return;}
+    for(const x of targets){
+      const range=`${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(ci2)}${x.i+2}`;
+      try{
+        const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+          {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newVal]]})});
+        if(res.ok){contactRows[x.i][ci2]=newVal;ok++;}else fail++;
+      }catch{fail++;}
+    }
+  }
+  document.getElementById('q-grp-msg').textContent='✓ Updated '+ok+(fail?' ('+fail+' failed)':'');
+  // Re-render to show updated values
+  renderQueryResults(lastQueryResults);
+}
+
+// Per-row edit: open edit panel for that contact with cols-only fields
+function openQRowEdit(ri){
+  const x=lastQueryResults[ri];
+  if(!x)return;
+  // Set as current contact and open edit panel
+  currentContactIdx=x.i;
+  currentAcctId=normId(get(contactRows[x.i],contactHdr,'accountid'));
+  // Build field list from active cols that are editable
+  const cols=getActiveCols();
+  const fields=cols.filter(c=>Q_EDIT_FIELDS[c]&&Q_EDIT_FIELDS[c].sheetKey).map(c=>({
+    label:Q_EDIT_FIELDS[c].label, key:Q_EDIT_FIELDS[c].sheetKey
+  }));
+  if(!fields.length){alert('None of the selected columns are directly editable. Add an editable column like Action Plan, Solicitor, or Giving Category.');return;}
+  const sel=document.getElementById('edit-field-sel');
+  sel.innerHTML='<option value="">— choose —</option>';
+  fields.forEach(f=>{const o=document.createElement('option');o.value=f.key;o.textContent=f.label;sel.appendChild(o);});
+  document.getElementById('edit-panel-title').textContent='✏️ Edit — '+x.name;
+  document.getElementById('edit-current').textContent='';
+  document.getElementById('edit-new').value='';
+  hideMsg('edit-msg');
+  editContactIdx=x.i;
+  document.getElementById('edit-panel').classList.add('open');
+  document.getElementById('edit-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function clearQuery(){
