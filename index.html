@@ -1115,7 +1115,7 @@ async function sendEmail(){
     try{const res=await authedFetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:{raw:encoded}})});if(res.ok)created++;else failed++;}
     catch{failed++;}
   }
-  if(created>0)showMsg('email-msg',`✓ Created ${created} draft(s) in Gmail!${failed?' ('+failed+' failed)':''},'success');
+  if(created>0)showMsg('email-msg',`✓ Created ${created} draft(s) in Gmail!${failed?' ('+failed+' failed)':''}`, 'success');
   else showMsg('email-msg','Failed to create drafts. Check Gmail API is enabled.','error');
 }
 
