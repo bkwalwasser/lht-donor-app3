@@ -23,6 +23,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .nav{display:flex;background:var(--white);border-bottom:1px solid var(--gray-200);position:sticky;top:52px;z-index:99}
 .nav-tab{flex:1;padding:11px 4px;font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--gray-500);border-bottom:2px solid transparent;transition:all 0.15s;background:none;border-top:none;border-left:none;border-right:none}
 .nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+/* Persistent search bar shown in ledger */
+.persistent-search{background:var(--white);border-bottom:1px solid var(--gray-200);padding:8px 12px;position:sticky;top:96px;z-index:98;display:none}
+.persistent-search .search-wrap{margin-bottom:0}
 .main{max-width:480px;margin:0 auto;padding:14px}
 .card{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);padding:14px 16px;margin-bottom:10px}
 .section-head{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:10px}
@@ -30,6 +33,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .form-label:first-of-type{margin-top:0}
 .form-input{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--radius-sm);border:1px solid var(--gray-300);background:var(--gray-100);color:var(--gray-900);outline:none;transition:border-color 0.15s}
 .form-input:focus{border-color:var(--blue);background:white}
+select.form-input{cursor:pointer}
 .btn-row{display:flex;gap:8px;margin-top:12px}
 .btn{flex:1;padding:10px 14px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--gray-300);background:var(--white);color:var(--gray-900);transition:all 0.15s}
 .btn:hover{background:var(--gray-100)}
@@ -56,7 +60,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .result-name{font-size:13px;font-weight:600;color:var(--gray-900)}
 .result-sub{font-size:11px;color:var(--gray-500);margin-top:1px}
 /* Ledger */
-.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--gray-500);background:none;border:none;cursor:pointer;padding:0;margin-bottom:12px}
 .ledger-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--gray-200);overflow:hidden;margin-bottom:10px}
 .ledger-hero{background:var(--navy);padding:16px;display:flex;align-items:center;gap:12px}
 .avatar-hero{width:48px;height:48px;min-width:48px;border-radius:50%;background:rgba(255,255,255,0.15);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600}
@@ -70,6 +73,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .ledger-body{padding:14px 16px}
 .sec-title{font-size:10px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.07em;margin:14px 0 7px;border-bottom:1px solid var(--gray-200);padding-bottom:4px;display:flex;justify-content:space-between;align-items:center}
 .sec-title:first-child{margin-top:0}
+.sec-edit-btn{background:none;border:1px solid var(--gray-300);border-radius:var(--radius-sm);padding:2px 8px;font-size:10px;color:var(--gray-500);cursor:pointer;white-space:nowrap}
+.sec-edit-btn:hover{background:var(--gray-100);color:var(--gray-900)}
 .field-row{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;gap:10px}
 .field-label{font-size:12px;color:var(--gray-500);min-width:110px;flex-shrink:0}
 .field-value{font-size:12px;color:var(--gray-900);text-align:right;word-break:break-word}
@@ -85,41 +90,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .yr-cell .a{font-size:10px;font-weight:600;color:var(--gray-900)}
 .yr-cell.hit{background:var(--blue-light)}
 .yr-cell.hit .a{color:var(--blue)}
-/* Expand toggle */
 .expand-btn{background:none;border:1px solid var(--gray-300);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;color:var(--gray-700);cursor:pointer;display:flex;align-items:center;gap:4px}
 .expand-btn:hover{background:var(--gray-100)}
 .expand-section{display:none}
 .expand-section.open{display:block}
-/* Relationships */
+/* Relationships - clickable */
 .rel-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-200)}
 .rel-item:last-child{border-bottom:none}
-.rel-check{width:16px;height:16px;cursor:pointer;accent-color:var(--blue);flex-shrink:0;margin-top:2px}
 .rel-info{flex:1;min-width:0}
 .rel-name{font-size:13px;font-weight:600}
+.rel-name.clickable{color:var(--blue);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.rel-name.clickable:hover{color:var(--blue-mid)}
 .rel-type{font-size:11px;color:var(--gray-500)}
 .rel-contact{font-size:11px;color:var(--gray-700);margin-top:2px}
-/* Ded status */
 .ded-check{display:inline-block;font-size:13px;font-weight:600;margin-left:4px}
 .ded-check.yes{color:var(--green)}
 .ded-check.no{color:#A32D2D}
-/* Email compose */
 .template-area{width:100%;font-size:13px;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--gray-300);background:var(--gray-100);min-height:120px;resize:vertical;font-family:inherit;line-height:1.6}
 .template-area:focus{border-color:var(--blue);background:white;outline:none}
-/* Detail table */
 .detail-tbl{width:100%;border-collapse:collapse;font-size:11px}
 .detail-tbl th{padding:5px 6px;text-align:left;font-size:10px;color:var(--gray-500);font-weight:600;text-transform:uppercase;background:var(--gray-100);white-space:nowrap}
 .detail-tbl td{padding:5px 6px;border-bottom:1px solid var(--gray-200);vertical-align:top;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* Edit panel */
 .edit-panel{display:none;margin-top:10px}
 .edit-panel.open{display:block}
-/* Add contact */
 .form-textarea{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--radius-sm);border:1px solid var(--gray-300);background:var(--gray-100);color:var(--gray-900);outline:none;resize:vertical;font-family:inherit;min-height:60px}
 .form-textarea:focus{border-color:var(--blue);background:white}
 .empty{text-align:center;padding:36px 16px;color:var(--gray-500)}
 .empty-icon{font-size:32px;margin-bottom:8px}
 .empty-text{font-size:13px}
-/* yr chip */
 .yr-chip{display:inline-flex;align-items:center;background:var(--amber-light);color:var(--amber);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600;margin:2px 3px 2px 0}
+/* Query tab */
+.filter-group{margin-bottom:14px}
+.filter-group-title{font-size:11px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px}
+.filter-check-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.filter-chip-toggle{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:20px;padding:4px 10px;cursor:pointer;transition:all 0.12s;user-select:none}
+.filter-chip-toggle.on{background:var(--blue-light);border-color:var(--blue);color:var(--blue-mid)}
+.filter-chip-toggle input{display:none}
+.qe-results-tbl{width:100%;border-collapse:collapse;font-size:11px;min-width:400px}
+.qe-results-tbl th{padding:6px 8px;text-align:left;font-size:10px;color:var(--gray-500);font-weight:600;text-transform:uppercase;background:var(--gray-100);white-space:nowrap}
+.qe-results-tbl td{padding:6px 8px;border-bottom:1px solid var(--gray-200);vertical-align:top;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qe-results-tbl tr:hover td{background:var(--gray-100);cursor:pointer}
+.result-count{font-size:12px;color:var(--gray-500);margin:8px 0 6px;font-weight:500}
+
+/* Ledger persistent search bar */
+.ledger-search-bar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:10px 14px;margin:-14px -14px 14px -14px;position:relative}
+.sec-edit-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 6px;border-radius:var(--radius-sm);color:var(--gray-500);transition:all 0.12s}
+.sec-edit-btn:hover{background:var(--blue-light);color:var(--blue)}
+.rel-link-btn{background:var(--blue-light);border:1px solid var(--blue);color:var(--blue-mid);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;flex-shrink:0;white-space:nowrap}
+.rel-link-btn:hover{background:var(--blue);color:white}
+.qfilter-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+.qfilter-row .form-input{flex:1;min-width:100px}
+.qresult-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.qresult-tbl th{padding:6px 8px;text-align:left;font-size:10px;color:var(--gray-500);font-weight:600;text-transform:uppercase;background:var(--gray-100);white-space:nowrap}
+.qresult-tbl td{padding:7px 8px;border-bottom:1px solid var(--gray-200);vertical-align:top}
+.qresult-tbl tr:hover td{background:var(--blue-light);cursor:pointer}
+.qcount{font-size:12px;color:var(--gray-500);margin:6px 0 10px;font-weight:500}
 </style>
 </head>
 <body>
@@ -134,8 +159,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
 <div class="nav" id="main-nav" style="display:none">
   <button class="nav-tab active" onclick="showTab('lookup')" id="tab-lookup">🔍 Lookup</button>
+  <button class="nav-tab" onclick="showTab('query')" id="tab-query">🔎 Query</button>
   <button class="nav-tab" onclick="showTab('add')" id="tab-add">➕ Add</button>
   <button class="nav-tab" onclick="showTab('sync')" id="tab-sync">🔄 Sync</button>
+</div>
+
+<!-- Persistent search bar (shown when in ledger view) -->
+<div class="persistent-search" id="persistent-search">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search-input-persist" type="search" placeholder="Search name, city, ID…" oninput="persistSearch(this.value)" autocomplete="off" style="font-size:14px;padding:8px 12px 8px 38px" />
+  </div>
+  <div id="persist-results" style="display:none;position:absolute;left:12px;right:12px;background:white;border:1px solid var(--gray-300);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:200;max-height:260px;overflow-y:auto"></div>
 </div>
 
 <div class="main">
@@ -175,24 +210,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
   <!-- LEDGER -->
   <div id="ledger-section" style="display:none">
-    <button class="back-btn" onclick="goBack()">← Back</button>
     <div id="ledger-content"></div>
-    <!-- Edit panel (shared) -->
+    <!-- Edit panel (shared, context-aware) -->
     <div id="edit-panel" class="card edit-panel">
       <div class="section-head" style="display:flex;justify-content:space-between;align-items:center">
-        <span>✏️ Edit field</span>
+        <span id="edit-panel-title">✏️ Edit field</span>
         <button onclick="closeEdit()" style="background:none;border:none;font-size:20px;color:var(--gray-500);cursor:pointer">×</button>
       </div>
       <label class="form-label">Field</label>
       <select class="form-input" id="edit-field-sel" onchange="onEditFieldChange()">
         <option value="">— choose —</option>
-        <option value="Giving Category">Giving Category</option>
-        <option value="Action Plan">Action Plan</option>
-        <option value="Action Date">Action Date</option>
-        <option value="Notes">Notes</option>
-        <option value="Future Pledge Yrs">Future Pledge Yrs</option>
-        <option value="Future Pledge Amt">Future Pledge Amt</option>
-        <option value="Faulty Phone or Address">Faulty Phone or Address</option>
       </select>
       <label class="form-label">Current value</label>
       <div id="edit-current" style="font-size:12px;color:var(--gray-500);background:var(--gray-100);padding:8px 10px;border-radius:var(--radius-sm);min-height:32px;margin-bottom:4px"></div>
@@ -220,6 +247,105 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
         <button class="btn btn-primary" onclick="sendEmail()">Create Gmail draft(s)</button>
       </div>
       <div id="email-msg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- QUERY TAB -->
+  <div id="tab-query-content" style="display:none">
+    <div class="card">
+      <div class="section-head">🔎 Query Contacts</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Filter your contact list by category, location, or giving status.</p>
+
+      <div class="filter-group">
+        <div class="filter-group-title">Giving Category</div>
+        <div class="filter-check-row" id="qf-cat">
+          <label class="filter-chip-toggle"><input type="checkbox" value="ACTIVE_LOYAL" onchange="qfToggle(this)">Active Loyal</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="ACTIVE_CONSISTENT" onchange="qfToggle(this)">Active Consistent</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="RECENTLY_LAPSED" onchange="qfToggle(this)">Recently Lapsed</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="LAPSED_REENGAGEABLE" onchange="qfToggle(this)">Lapsed Reengageable</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="LAPSED_LONG" onchange="qfToggle(this)">Lapsed Long</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="ONE_TIME" onchange="qfToggle(this)">One Time</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="SPORADIC" onchange="qfToggle(this)">Sporadic</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="PROSPECTIVE" onchange="qfToggle(this)">Prospective</label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">Contact Type</div>
+        <div class="filter-check-row" id="qf-type">
+          <label class="filter-chip-toggle"><input type="checkbox" value="Donor" onchange="qfToggle(this)">Donor</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="Parent" onchange="qfToggle(this)">Parent</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="Student" onchange="qfToggle(this)">Student/Alumni</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="Prospective" onchange="qfToggle(this)">Prospective</label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">Has Action Plan</div>
+        <div class="filter-check-row" id="qf-action">
+          <label class="filter-chip-toggle"><input type="checkbox" value="has_action" onchange="qfToggle(this)">Has Action Plan</label>
+          <label class="filter-chip-toggle"><input type="checkbox" value="no_action" onchange="qfToggle(this)">No Action Plan</label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">Has Future Pledge</div>
+        <div class="filter-check-row">
+          <label class="filter-chip-toggle"><input type="checkbox" value="has_pledge" onchange="qfToggle(this)">Has Future Pledge</label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">Text Search (name / city)</div>
+        <input class="form-input" id="qf-text" placeholder="e.g. Teaneck, New York, GOLDBERG…" oninput="runQuery()" />
+      </div>
+
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn btn-primary" onclick="runQuery()">Run Query</button>
+        <button class="btn" onclick="clearQuery()">Clear</button>
+      </div>
+    </div>
+
+    <div id="query-results" style="display:none">
+      <div class="result-count" id="query-count"></div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:white;border-radius:var(--radius);border:1px solid var(--gray-200)">
+        <table class="qe-results-tbl" id="query-table">
+          <thead><tr>
+            <th>Name</th><th>Category</th><th>Type</th><th>City</th><th>Lifetime</th><th>Action</th>
+          </tr></thead>
+          <tbody id="query-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- QUERIES TAB -->
+  <div id="tab-queries-content" style="display:none">
+    <div class="card">
+      <div class="section-head">🔎 Query Contacts</div>
+      <div class="qfilter-row">
+        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Giving Category</label>
+          <select class="form-input" id="q-cat"><option value="">Any</option><option>ACTIVE_LOYAL</option><option>ACTIVE_CONSISTENT</option><option>RECENTLY_LAPSED</option><option>LAPSED_REENGAGEABLE</option><option>LAPSED_LONG</option><option>ONE_TIME</option><option>SPORADIC</option><option>PROSPECTIVE</option></select></div>
+        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Contact Type</label>
+          <select class="form-input" id="q-type"><option value="">Any</option><option>Donor (4k+)</option><option>Student/Alumni</option><option>Parent</option><option>Prospective</option></select></div>
+      </div>
+      <div class="qfilter-row">
+        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">State / Country</label><input class="form-input" id="q-state" placeholder="e.g. NJ, NY, Israel" /></div>
+        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Has Action Plan</label><select class="form-input" id="q-action"><option value="">Either</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+      </div>
+      <div class="qfilter-row">
+        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Has Email</label><select class="form-input" id="q-email"><option value="">Either</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Has Dedication</label><select class="form-input" id="q-ded"><option value="">Either</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+      </div>
+      <div class="qfilter-row"><div style="flex:2;min-width:200px"><label class="form-label" style="margin-top:0">Name / City search</label><input class="form-input" id="q-text" placeholder="Any text to match…" /></div></div>
+      <div class="btn-row" style="margin-top:4px"><button class="btn btn-primary" onclick="runQuery()">Run Query</button><button class="btn" onclick="clearQuery()">Clear</button></div>
+    </div>
+    <div id="q-results" style="display:none">
+      <div class="qcount" id="q-count"></div>
+      <div style="overflow-x:auto;background:white;border-radius:var(--radius);border:1px solid var(--gray-200)">
+        <table class="qresult-tbl"><thead><tr><th>Name</th><th>Type</th><th>Category</th><th>State</th><th>Lifetime</th><th>Action</th></tr></thead><tbody id="q-tbody"></tbody></table>
+      </div>
     </div>
   </div>
 
@@ -275,1040 +401,985 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 </div><!-- /main -->
 
 <script>
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
+
+// Section field definitions for section-level edit pencils
+const SECTION_FIELDS = {
+  contact: [
+    {label:'Phone', key:'phone'}, {label:'Address', key:'address'},
+    {label:'Email', key:'email'}, {label:'Faulty Phone or Address', key:'faulty phone or address'}
+  ],
+  giving: [
+    {label:'Giving Category', key:'giving category'}, {label:'Action Plan', key:'action plan'},
+    {label:'Action Date', key:'action date'}, {label:'Notes', key:'notes'},
+    {label:'Future Pledge Yrs', key:'future pledge yrs'}, {label:'Future Pledge Amt', key:'future pledge amt'},
+    {label:'Total Commitment', key:'total commitment'}
+  ],
+};
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
 const CLIENT_ID = '951254535664-gumkta7ekgdnnv2nuk6iqhi5ohpofpke.apps.googleusercontent.com';
 const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/gmail.compose',
   'https://www.googleapis.com/auth/userinfo.email',
 ].join(' ');
-
 const SHEET_ID_DEFAULT = '14K7Xt33LLB7vNSU-KKHLEmtGehYed9NYWNNhYquGHno';
-
-// Tab names (exact, case-sensitive)
 const TAB = {
-  CONTACTS:       'All contacts',
-  STUDENTS:       'All Students',
-  DEDICATIONS:    'Dedications',
-  RELATIONSHIPS:  'Relationships',
-  DON_OVERVIEW:   'Donations_Overview',
-  DON_DETAIL:     'Donations_Detail',
-  TUI_OVERVIEW:   'Tuition_Overview',
-  TUI_DETAIL:     'Tuition_Detail',
+  CONTACTS:'All contacts', STUDENTS:'All Students', DEDICATIONS:'Dedications',
+  RELATIONSHIPS:'Relationships', DON_OVERVIEW:'Donations_Overview',
+  DON_DETAIL:'Donations_Detail', TUI_OVERVIEW:'Tuition_Overview', TUI_DETAIL:'Tuition_Detail',
 };
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
-let tokenClient = null;
-let accessToken = null;
-let tokenExpiresAt = 0;
-let signedInEmail = '';
+let tokenClient=null, accessToken=null, tokenExpiresAt=0, signedInEmail='';
 
 function gisLoaded() {
-  if (window._gisLoaded) return;
-  window._gisLoaded = true;
-  if (!window.google?.accounts?.oauth2) { setTimeout(gisLoaded, 150); return; }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID, scope: SCOPES, hd: 'levhatorah.org', callback: ''
-  });
-  const btn = document.getElementById('signin-btn');
-  if (btn) btn.textContent = '🔐 Sign in with Google';
+  if(window._gisLoaded) return; window._gisLoaded=true;
+  if(!window.google?.accounts?.oauth2){setTimeout(gisLoaded,150);return;}
+  tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,hd:'levhatorah.org',callback:''});
+  const btn=document.getElementById('signin-btn');
+  if(btn) btn.textContent='🔐 Sign in with Google';
 }
-// Fallback poller
-(function poll() {
-  if (!window._gisLoaded && window.google?.accounts?.oauth2) gisLoaded();
-  if (!window._gisLoaded) setTimeout(poll, 200);
-})();
+(function poll(){if(!window._gisLoaded&&window.google?.accounts?.oauth2)gisLoaded();if(!window._gisLoaded)setTimeout(poll,200);})();
 
-function requestToken(prompt) {
-  return new Promise((resolve, reject) => {
-    if (!tokenClient) { reject(new Error('Sign-in not ready')); return; }
-    tokenClient.callback = r => {
-      if (r.error) { reject(r); return; }
-      accessToken = r.access_token;
-      tokenExpiresAt = Date.now() + ((r.expires_in || 3600) * 1000) - 60000;
+function requestToken(prompt){
+  return new Promise((resolve,reject)=>{
+    if(!tokenClient){reject(new Error('Sign-in not ready'));return;}
+    tokenClient.callback=r=>{
+      if(r.error){reject(r);return;}
+      accessToken=r.access_token;
+      tokenExpiresAt=Date.now()+((r.expires_in||3600)*1000)-60000;
       resolve(accessToken);
     };
-    tokenClient.requestAccessToken({ prompt });
+    tokenClient.requestAccessToken({prompt});
   });
 }
-
-async function ensureToken() {
-  if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
-  try { return await requestToken(''); }
-  catch { return await requestToken('consent'); }
+async function ensureToken(){
+  if(accessToken&&Date.now()<tokenExpiresAt)return accessToken;
+  try{return await requestToken('');}catch{return await requestToken('consent');}
 }
-
-async function authedFetch(url, opts = {}) {
-  const token = await ensureToken();
-  opts.headers = { ...opts.headers, Authorization: 'Bearer ' + token };
-  let res = await fetch(url, opts);
-  if (res.status === 401) {
-    const t2 = await requestToken('consent');
-    opts.headers.Authorization = 'Bearer ' + t2;
-    res = await fetch(url, opts);
-  }
+async function authedFetch(url,opts={}){
+  const token=await ensureToken();
+  opts.headers={...opts.headers,Authorization:'Bearer '+token};
+  let res=await fetch(url,opts);
+  if(res.status===401){const t2=await requestToken('consent');opts.headers.Authorization='Bearer '+t2;res=await fetch(url,opts);}
   return res;
 }
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let sheetId = SHEET_ID_DEFAULT;
-let isDemo = false;
-
-// Parsed data from each tab
-let contactRows = [], contactHdr = {};
-let studentRows = [], studentHdr = {};
-let dedRows = [], dedHdr = {};
-let relRows = [], relHdr = {};
-let donOvRows = [], donOvHdr = {};
-let tuiOvRows = [], tuiOvHdr = {};
-// Lazy-loaded
-let donDetRows = [], donDetHdr = {};
-let tuiDetRows = [], tuiDetHdr = {};
-let detailLoaded = false;
-let detailLoading = false;
-
-// Index maps
-let contactByAcct = new Map();
-let studentByAcct = new Map();
-let dedByAcct = new Map();
-let relByAcct = new Map();
-let donOvByAcct = new Map();
-let tuiOvByAcct = new Map();
-
-// Current ledger context
-let currentAcctId = '';
-let currentContactIdx = -1;
-let ledgerHistory = [];
-let emailCheckboxes = {}; // email → checked
+let sheetId=SHEET_ID_DEFAULT, isDemo=false;
+let contactRows=[],contactHdr={};
+let studentRows=[],studentHdr={};
+let dedRows=[],dedHdr={};
+let relRows=[],relHdr={};
+let donOvRows=[],donOvHdr={};
+let tuiOvRows=[],tuiOvHdr={};
+let donDetRows=[],donDetHdr={};
+let tuiDetRows=[],tuiDetHdr={};
+let detailLoaded=false,detailLoading=false;
+let contactByAcct=new Map(),studentByAcct=new Map(),dedByAcct=new Map();
+let relByAcct=new Map(),donOvByAcct=new Map(),tuiOvByAcct=new Map();
+let currentAcctId='',currentContactIdx=-1;
+let ledgerHistory=[];
+let emailCheckboxes={};
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-function hdr(arr) {
-  const h = {};
-  (arr || []).forEach((v, i) => { h[(v || '').trim().toLowerCase()] = i; });
-  return h;
-}
-function col(hdrObj, ...keys) {
-  for (const k of keys) {
-    const idx = hdrObj[k.toLowerCase()];
-    if (idx !== undefined) return idx;
-  }
-  return -1;
-}
-function get(row, hdrObj, ...keys) {
-  const i = col(hdrObj, ...keys);
-  return i >= 0 ? (row[i] || '') : '';
-}
-function normId(v) {
-  if (!v) return '';
-  return String(v).trim().replace(/,/g, '').replace(/\.0+$/, '');
-}
-function fmt$(v) {
-  const n = parseFloat(String(v).replace(/[$,\s]/g, ''));
-  return isNaN(n) || n <= 0 ? '' : '$' + Math.round(n).toLocaleString();
-}
-function initials(name) {
-  const p = name.replace(/,.*/, '').trim().split(/\s+/);
-  return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
-}
-function avatarCls(cat) {
-  if (!cat) return '';
-  if (cat.includes('LOYAL')) return 'loyal';
-  if (cat.includes('RECENT')) return 'recent';
-  if (cat.includes('LAPSED')) return 'lapsed';
-  return '';
-}
-function pillCls(cat) {
-  if (!cat) return 'pill-one';
-  if (cat === 'ACTIVE_LOYAL') return 'pill-loyal';
-  if (cat.startsWith('ACTIVE')) return 'pill-active';
-  if (cat.includes('LAPSED') || cat.includes('RECENT')) return 'pill-lapsed';
-  return 'pill-one';
-}
-function pillLabel(cat) {
-  return cat.replace(/_/g, ' ');
-}
-function showMsg(id, txt, type) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = txt; el.className = 'msg ' + type; el.style.display = 'block';
-}
-function hideMsg(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
-function colToLetter(n) { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }
+function hdr(arr){const h={};(arr||[]).forEach((v,i)=>{h[(v||'').trim().toLowerCase()]=i;});return h;}
+function col(hdrObj,...keys){for(const k of keys){const idx=hdrObj[k.toLowerCase()];if(idx!==undefined)return idx;}return -1;}
+function get(row,hdrObj,...keys){const i=col(hdrObj,...keys);return i>=0?(row[i]||''):'';}
+function normId(v){if(!v)return'';return String(v).trim().replace(/,/g,'').replace(/\.0+$/,'');}
+function fmt$(v){const n=parseFloat(String(v).replace(/[$,\s]/g,''));return isNaN(n)||n<=0?'':'$'+Math.round(n).toLocaleString();}
+function initials(name){const p=name.replace(/,.*/,'').trim().split(/\s+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():name.slice(0,2).toUpperCase();}
+function avatarCls(cat){if(!cat)return'';if(cat.includes('LOYAL'))return'loyal';if(cat.includes('RECENT'))return'recent';if(cat.includes('LAPSED'))return'lapsed';return'';}
+function pillCls(cat){if(!cat)return'pill-one';if(cat==='ACTIVE_LOYAL')return'pill-loyal';if(cat.startsWith('ACTIVE'))return'pill-active';if(cat.includes('LAPSED')||cat.includes('RECENT'))return'pill-lapsed';return'pill-one';}
+function pillLabel(cat){return cat.replace(/_/g,' ');}
+function showMsg(id,txt,type){const el=document.getElementById(id);if(!el)return;el.textContent=txt;el.className='msg '+type;el.style.display='block';}
+function hideMsg(id){const el=document.getElementById(id);if(el)el.style.display='none';}
+function colToLetter(n){let s='';n++;while(n>0){n--;s=String.fromCharCode(65+(n%26))+s;n=Math.floor(n/26);}return s;}
+function toggleAdvanced(){const s=document.getElementById('advanced-section');s.style.display=s.style.display==='none'?'block':'none';}
 
-function toggleAdvanced() {
-  const s = document.getElementById('advanced-section');
-  s.style.display = s.style.display === 'none' ? 'block' : 'none';
-}
-
-// ─── SIGN IN / CONNECT ────────────────────────────────────────────────────────
-async function signIn() {
-  const btn = document.getElementById('signin-btn');
-  btn.disabled = true;
-  showMsg('msg', 'Opening Google sign-in…', 'info');
-  try {
-    if (!tokenClient) throw new Error('Sign-in library not loaded yet — please wait a moment and try again.');
+// ─── SIGN IN ──────────────────────────────────────────────────────────────────
+async function signIn(){
+  const btn=document.getElementById('signin-btn');btn.disabled=true;
+  showMsg('msg','Opening Google sign-in…','info');
+  try{
+    if(!tokenClient)throw new Error('Sign-in library not loaded yet — please wait a moment and try again.');
     await requestToken('consent');
-    sheetId = (document.getElementById('sheet-id').value || '').trim() || SHEET_ID_DEFAULT;
+    sheetId=(document.getElementById('sheet-id').value||'').trim()||SHEET_ID_DEFAULT;
     await loadAllData();
-  } catch (e) {
-    showMsg('msg', 'Sign-in failed: ' + (e.message || e.error || 'unknown'), 'error');
-  } finally { btn.disabled = false; }
+  }catch(e){showMsg('msg','Sign-in failed: '+(e.message||e.error||'unknown'),'error');}
+  finally{btn.disabled=false;}
 }
 
-async function loadAllData() {
-  showMsg('msg', 'Loading data…', 'info');
-  try {
-    // Batch load the 6 primary tabs (not the two detail tabs — those are lazy)
-    const tabs = [TAB.CONTACTS, TAB.STUDENTS, TAB.DEDICATIONS, TAB.RELATIONSHIPS, TAB.DON_OVERVIEW, TAB.TUI_OVERVIEW];
-    const qs = tabs.map(t => `ranges=${encodeURIComponent(t)}`).join('&');
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchGet?${qs}`;
-    const res = await authedFetch(url);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error?.message || res.status);
-    const vr = data.valueRanges || [];
-
-    // All contacts
-    const cv = vr[0]?.values || [];
-    if (cv.length < 2) throw new Error('All contacts tab appears empty or missing.');
-    contactHdr = hdr(cv[0]);
-    contactRows = cv.slice(1).filter(r => (r[col(contactHdr, 'name')] || '').trim());
-
-    // All Students
-    const sv = vr[1]?.values || [];
-    if (sv.length >= 2) { studentHdr = hdr(sv[0]); studentRows = sv.slice(1).filter(r => (r[col(studentHdr, 'name')] || '').trim()); }
-
-    // Dedications
-    const dv = vr[2]?.values || [];
-    if (dv.length >= 2) { dedHdr = hdr(dv[0]); dedRows = dv.slice(1).filter(r => (r[col(dedHdr, 'account id')] || '').toString().trim()); }
-
-    // Relationships
-    const rv = vr[3]?.values || [];
-    if (rv.length >= 2) { relHdr = hdr(rv[0]); relRows = rv.slice(1); }
-
-    // Donations_Overview
-    const dov = vr[4]?.values || [];
-    if (dov.length >= 2) { donOvHdr = hdr(dov[0]); donOvRows = dov.slice(1).filter(r => (r[col(donOvHdr, 'accountid')] || '').toString().trim()); }
-
-    // Tuition_Overview
-    const tov = vr[5]?.values || [];
-    if (tov.length >= 2) { tuiOvHdr = hdr(tov[0]); tuiOvRows = tov.slice(1).filter(r => (r[col(tuiOvHdr, 'accountid')] || '').toString().trim()); }
-
+async function loadAllData(){
+  showMsg('msg','Loading data…','info');
+  try{
+    const tabs=[TAB.CONTACTS,TAB.STUDENTS,TAB.DEDICATIONS,TAB.RELATIONSHIPS,TAB.DON_OVERVIEW,TAB.TUI_OVERVIEW];
+    const qs=tabs.map(t=>`ranges=${encodeURIComponent(t)}`).join('&');
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchGet?${qs}`;
+    const res=await authedFetch(url);
+    const data=await res.json();
+    if(!res.ok)throw new Error(data?.error?.message||res.status);
+    const vr=data.valueRanges||[];
+    const cv=vr[0]?.values||[];
+    if(cv.length<2)throw new Error('All contacts tab appears empty or missing.');
+    contactHdr=hdr(cv[0]);contactRows=cv.slice(1).filter(r=>(r[col(contactHdr,'name')]||'').trim());
+    const sv=vr[1]?.values||[];
+    if(sv.length>=2){studentHdr=hdr(sv[0]);studentRows=sv.slice(1).filter(r=>(r[col(studentHdr,'name')]||'').trim());}
+    const dv=vr[2]?.values||[];
+    if(dv.length>=2){dedHdr=hdr(dv[0]);dedRows=dv.slice(1).filter(r=>(r[col(dedHdr,'account id')]||'').toString().trim());}
+    const rv=vr[3]?.values||[];
+    if(rv.length>=2){relHdr=hdr(rv[0]);relRows=rv.slice(1);}
+    const dov=vr[4]?.values||[];
+    if(dov.length>=2){donOvHdr=hdr(dov[0]);donOvRows=dov.slice(1).filter(r=>(r[col(donOvHdr,'accountid')]||'').toString().trim());}
+    const tov=vr[5]?.values||[];
+    if(tov.length>=2){tuiOvHdr=hdr(tov[0]);tuiOvRows=tov.slice(1).filter(r=>(r[col(tuiOvHdr,'accountid')]||'').toString().trim());}
     buildIndexes();
     await fetchUserEmail();
     goLive();
-  } catch (e) {
-    showMsg('msg', 'Could not load data: ' + e.message, 'error');
-  }
+  }catch(e){showMsg('msg','Could not load data: '+e.message,'error');}
 }
 
-async function fetchUserEmail() {
-  try {
-    const r = await authedFetch('https://www.googleapis.com/oauth2/v3/userinfo');
-    if (r.ok) { const u = await r.json(); signedInEmail = u.email || ''; }
-  } catch {}
+async function fetchUserEmail(){
+  try{const r=await authedFetch('https://www.googleapis.com/oauth2/v3/userinfo');if(r.ok){const u=await r.json();signedInEmail=u.email||'';}}catch{}
 }
 
-function buildIndexes() {
-  contactByAcct = new Map();
-  contactRows.forEach((r, i) => {
-    const id = normId(get(r, contactHdr, 'accountid'));
-    if (id) contactByAcct.set(id, i);
+function buildIndexes(){
+  contactByAcct=new Map();
+  contactRows.forEach((r,i)=>{const id=normId(get(r,contactHdr,'accountid'));if(id)contactByAcct.set(id,i);});
+  studentByAcct=new Map();
+  studentRows.forEach((r,i)=>{
+    const id=normId(get(r,studentHdr,'accountid'));
+    if(id){if(!studentByAcct.has(id))studentByAcct.set(id,[]);studentByAcct.get(id).push(i);}
+    const pid=normId(get(r,studentHdr,'parent_accountid'));
+    if(pid){const key='p:'+pid;if(!studentByAcct.has(key))studentByAcct.set(key,[]);studentByAcct.get(key).push(i);}
   });
-  studentByAcct = new Map();
-  studentRows.forEach((r, i) => {
-    const id = normId(get(r, studentHdr, 'accountid'));
-    if (id) { if (!studentByAcct.has(id)) studentByAcct.set(id, []); studentByAcct.get(id).push(i); }
-    // Also index by parent account id
-    const pid = normId(get(r, studentHdr, 'parent_accountid'));
-    if (pid) {
-      const key = 'p:' + pid;
-      if (!studentByAcct.has(key)) studentByAcct.set(key, []);
-      studentByAcct.get(key).push(i);
-    }
+  dedByAcct=new Map();
+  dedRows.forEach((r,i)=>{const id=normId(get(r,dedHdr,'account id'));if(id){if(!dedByAcct.has(id))dedByAcct.set(id,[]);dedByAcct.get(id).push(i);}});
+  relByAcct=new Map();
+  relRows.forEach((r,i)=>{
+    const a=normId(get(r,relHdr,'persona_accountid'));
+    const b=normId(get(r,relHdr,'personb_accountid'));
+    if(a){if(!relByAcct.has(a))relByAcct.set(a,[]);relByAcct.get(a).push(i);}
+    if(b){if(!relByAcct.has(b))relByAcct.set(b,[]);relByAcct.get(b).push(i);}
   });
-  dedByAcct = new Map();
-  dedRows.forEach((r, i) => {
-    const id = normId(get(r, dedHdr, 'account id'));
-    if (id) { if (!dedByAcct.has(id)) dedByAcct.set(id, []); dedByAcct.get(id).push(i); }
-  });
-  relByAcct = new Map();
-  relRows.forEach((r, i) => {
-    const a = normId(get(r, relHdr, 'persona_accountid'));
-    const b = normId(get(r, relHdr, 'personb_accountid'));
-    if (a) { if (!relByAcct.has(a)) relByAcct.set(a, []); relByAcct.get(a).push(i); }
-    if (b) { if (!relByAcct.has(b)) relByAcct.set(b, []); relByAcct.get(b).push(i); }
-  });
-  donOvByAcct = new Map();
-  donOvRows.forEach((r, i) => {
-    const id = normId(get(r, donOvHdr, 'accountid'));
-    if (id) donOvByAcct.set(id, i);
-  });
-  tuiOvByAcct = new Map();
-  tuiOvRows.forEach((r, i) => {
-    const id = normId(get(r, tuiOvHdr, 'accountid'));
-    if (id) tuiOvByAcct.set(id, i);
-  });
+  donOvByAcct=new Map();
+  donOvRows.forEach((r,i)=>{const id=normId(get(r,donOvHdr,'accountid'));if(id)donOvByAcct.set(id,i);});
+  tuiOvByAcct=new Map();
+  tuiOvRows.forEach((r,i)=>{const id=normId(get(r,tuiOvHdr,'accountid'));if(id)tuiOvByAcct.set(id,i);});
 }
 
-// ─── LAZY LOAD DETAIL TABS ────────────────────────────────────────────────────
-async function ensureDetailLoaded() {
-  if (detailLoaded || isDemo) return;
-  if (detailLoading) {
-    return new Promise(res => { const t = setInterval(() => { if (!detailLoading) { clearInterval(t); res(); } }, 150); });
-  }
-  detailLoading = true;
-  try {
-    const tabs = [TAB.DON_DETAIL, TAB.TUI_DETAIL];
-    const qs = tabs.map(t => `ranges=${encodeURIComponent(t)}`).join('&');
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchGet?${qs}`;
-    const res = await authedFetch(url);
-    if (!res.ok) throw new Error(res.status);
-    const data = await res.json();
-    const vr = data.valueRanges || [];
-    const dv = vr[0]?.values || [];
-    if (dv.length >= 2) { donDetHdr = hdr(dv[0]); donDetRows = dv.slice(1); }
-    const tv = vr[1]?.values || [];
-    if (tv.length >= 2) { tuiDetHdr = hdr(tv[0]); tuiDetRows = tv.slice(1); }
-    detailLoaded = true;
-  } catch (e) { console.warn('Detail load failed:', e); }
-  detailLoading = false;
+async function ensureDetailLoaded(){
+  if(detailLoaded||isDemo)return;
+  if(detailLoading){return new Promise(res=>{const t=setInterval(()=>{if(!detailLoading){clearInterval(t);res();}},150);});}
+  detailLoading=true;
+  try{
+    const tabs=[TAB.DON_DETAIL,TAB.TUI_DETAIL];
+    const qs=tabs.map(t=>`ranges=${encodeURIComponent(t)}`).join('&');
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchGet?${qs}`;
+    const res=await authedFetch(url);
+    if(!res.ok)throw new Error(res.status);
+    const data=await res.json();
+    const vr=data.valueRanges||[];
+    const dv=vr[0]?.values||[];
+    if(dv.length>=2){donDetHdr=hdr(dv[0]);donDetRows=dv.slice(1);}
+    const tv=vr[1]?.values||[];
+    if(tv.length>=2){tuiDetHdr=hdr(tv[0]);tuiDetRows=tv.slice(1);}
+    detailLoaded=true;
+  }catch(e){console.warn('Detail load failed:',e);}
+  detailLoading=false;
 }
 
 // ─── GO LIVE ──────────────────────────────────────────────────────────────────
-function goLive() {
-  document.getElementById('setup-section').style.display = 'none';
-  document.getElementById('main-nav').style.display = 'flex';
-  const badge = document.getElementById('topbar-badge');
-  badge.textContent = (isDemo ? 'Demo' : (signedInEmail || 'Live')) + ' · ' + contactRows.length + ' contacts';
-  badge.style.display = 'inline-block';
-  document.getElementById('status-label').textContent = (isDemo ? 'Demo' : 'Live') + ' · ' + contactRows.length + ' contacts';
-  showTab('lookup');
-  doSearch('');
+function goLive(){
+  document.getElementById('setup-section').style.display='none';
+  document.getElementById('main-nav').style.display='flex';
+  const badge=document.getElementById('topbar-badge');
+  badge.textContent=(isDemo?'Demo':(signedInEmail||'Live'))+' · '+contactRows.length+' contacts';
+  badge.style.display='inline-block';
+  document.getElementById('status-label').textContent=(isDemo?'Demo':'Live')+' · '+contactRows.length+' contacts';
+  showTab('lookup');doSearch('');
 }
 
-function disconnect() {
-  if (accessToken && window.google?.accounts?.oauth2) {
-    try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch {}
-  }
-  accessToken = null; tokenExpiresAt = 0; signedInEmail = '';
-  contactRows = []; studentRows = []; dedRows = []; relRows = [];
-  donOvRows = []; tuiOvRows = []; donDetRows = []; tuiDetRows = [];
-  detailLoaded = false; detailLoading = false; isDemo = false;
-  document.getElementById('setup-section').style.display = 'block';
-  document.getElementById('main-nav').style.display = 'none';
-  document.getElementById('topbar-badge').style.display = 'none';
-  ['lookup','add','sync'].forEach(t => {
-    const el = document.getElementById('tab-' + t + '-content');
-    if (el) el.style.display = 'none';
-  });
-  document.getElementById('ledger-section').style.display = 'none';
-  document.getElementById('msg').style.display = 'none';
+function disconnect(){
+  if(accessToken&&window.google?.accounts?.oauth2){try{google.accounts.oauth2.revoke(accessToken,()=>{});}catch{}}
+  accessToken=null;tokenExpiresAt=0;signedInEmail='';
+  contactRows=[];studentRows=[];dedRows=[];relRows=[];
+  donOvRows=[];tuiOvRows=[];donDetRows=[];tuiDetRows=[];
+  detailLoaded=false;detailLoading=false;isDemo=false;
+  document.getElementById('setup-section').style.display='block';
+  document.getElementById('main-nav').style.display='none';
+  document.getElementById('topbar-badge').style.display='none';
+  document.getElementById('persistent-search').style.display='none';
+  ['lookup','query','add','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
+  document.getElementById('ledger-section').style.display='none';
+  document.getElementById('msg').style.display='none';
 }
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
-let activeTab = 'lookup';
-function showTab(name) {
-  activeTab = name;
-  ['lookup','add','sync'].forEach(t => {
-    const c = document.getElementById('tab-' + t + '-content');
-    if (c) c.style.display = t === name ? 'block' : 'none';
-    const b = document.getElementById('tab-' + t);
-    if (b) b.classList.toggle('active', t === name);
+let activeTab='lookup';
+function showTab(name){
+  activeTab=name;
+  ['lookup','query','add','sync'].forEach(t=>{
+    const c=document.getElementById('tab-'+t+'-content');if(c)c.style.display=t===name?'block':'none';
+    const b=document.getElementById('tab-'+t);if(b)b.classList.toggle('active',t===name);
   });
-  document.getElementById('ledger-section').style.display = 'none';
+  document.getElementById('ledger-section').style.display='none';
+  document.getElementById('persistent-search').style.display='none';
+}
+
+
+// ─── LEDGER SEARCH BAR ────────────────────────────────────────────────────────
+let ledgerSearchTimeout = null;
+function onLedgerSearch(q) {
+  const drop = document.getElementById('ledger-search-results');
+  clearTimeout(ledgerSearchTimeout);
+  if (!q.trim()) { drop.style.display = 'none'; return; }
+  ledgerSearchTimeout = setTimeout(() => {
+    const terms = q.toLowerCase().split(/\s+/);
+    const matches = hay => terms.every(t => hay.includes(t));
+    const hits = [];
+    contactRows.forEach((r, i) => {
+      const name = get(r, contactHdr, 'name');
+      const addr = get(r, contactHdr, 'address');
+      const hay = [name, addr, get(r, contactHdr, 'accountid')].join(' ').toLowerCase();
+      if (!matches(hay)) return;
+      const cat = get(r, contactHdr, 'giving category');
+      const city = (addr || '').split(',').slice(1, 3).join(',').trim();
+      hits.push({ i, name, cat, city });
+    });
+    if (!hits.length) { drop.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--gray-500)">No results</div>'; drop.style.display = 'block'; return; }
+    drop.innerHTML = hits.slice(0, 8).map(h => `
+      <div onclick="openLedgerFromSearch(${h.i})" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-200);cursor:pointer" onmouseover="this.style.background='var(--blue-light)'" onmouseout="this.style.background=''">
+        <div class="avatar ${avatarCls(h.cat)}" style="width:32px;height:32px;min-width:32px;font-size:11px">${initials(h.name)}</div>
+        <div><div style="font-size:13px;font-weight:600">${h.name}</div><div style="font-size:11px;color:var(--gray-500)">${h.city || '—'}</div></div>
+      </div>`).join('');
+    drop.style.display = 'block';
+  }, 200);
+}
+function openLedgerFromSearch(idx) {
+  document.getElementById('ledger-search-input').value = '';
+  document.getElementById('ledger-search-results').style.display = 'none';
+  openLedger(idx);
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#ledger-search-input') && !e.target.closest('#ledger-search-results')) {
+    const d = document.getElementById('ledger-search-results'); if (d) d.style.display = 'none';
+  }
+});
+
+// Navigate to related contact
+function openRelLedger(acctId) {
+  const idx = contactByAcct.get(acctId);
+  if (idx !== undefined) { openLedger(idx); }
+  else { alert('This person is not found as a primary contact in the database.'); }
 }
 
 // ─── SEARCH ───────────────────────────────────────────────────────────────────
-function doSearch(q) {
-  const area = document.getElementById('results-area');
-  if (!q.trim()) {
-    area.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Start typing to search</div></div>';
-    return;
-  }
-  const terms = q.toLowerCase().split(/\s+/);
-  const matches = hay => terms.every(t => hay.includes(t));
-  const hits = [];
-  contactRows.forEach((r, i) => {
-    const name = get(r, contactHdr, 'name');
-    const addr = get(r, contactHdr, 'address');
-    const email = get(r, contactHdr, 'email');
-    const id = get(r, contactHdr, 'accountid');
-    const hay = [name, addr, email, id].join(' ').toLowerCase();
-    if (!matches(hay)) return;
-    const cat = get(r, contactHdr, 'giving category');
-    const life = get(r, contactHdr, 'lifetime giving (if donor 4k+)');
-    const city = (addr || '').split(',').slice(1, 3).join(',').trim();
-    hits.push({ i, name, cat, sub: [city, life ? fmt$(life) : ''].filter(Boolean).join(' · ') });
-  });
-  if (!hits.length) { area.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No results found</div></div>'; return; }
-  area.innerHTML = hits.slice(0, 15).map(h => `
+function doSearch(q){
+  const area=document.getElementById('results-area');
+  if(!q.trim()){area.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Start typing to search</div></div>';return;}
+  const hits=searchContacts(q);
+  if(!hits.length){area.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No results found</div></div>';return;}
+  area.innerHTML=hits.slice(0,15).map(h=>`
     <div class="result-item" onclick="openLedger(${h.i})">
       <div class="avatar ${avatarCls(h.cat)}">${initials(h.name)}</div>
       <div style="flex:1;min-width:0">
         <div class="result-name">${h.name}</div>
-        <div class="result-sub">${h.sub || '—'}</div>
+        <div class="result-sub">${h.sub||'—'}</div>
       </div>
       <span style="color:var(--gray-300);font-size:18px">›</span>
     </div>`).join('');
 }
 
+function searchContacts(q){
+  const terms=q.toLowerCase().split(/\s+/);
+  const matches=hay=>terms.every(t=>hay.includes(t));
+  const hits=[];
+  contactRows.forEach((r,i)=>{
+    const name=get(r,contactHdr,'name');
+    const addr=get(r,contactHdr,'address');
+    const email=get(r,contactHdr,'email');
+    const id=get(r,contactHdr,'accountid');
+    const hay=[name,addr,email,id].join(' ').toLowerCase();
+    if(!matches(hay))return;
+    const cat=get(r,contactHdr,'giving category');
+    const life=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+    const city=(addr||'').split(',').slice(1,3).join(',').trim();
+    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · ')});
+  });
+  return hits;
+}
+
+// Persistent search (shown in ledger)
+let persistSearchTimer=null;
+function persistSearch(q){
+  const pr=document.getElementById('persist-results');
+  if(!q.trim()){pr.style.display='none';return;}
+  clearTimeout(persistSearchTimer);
+  persistSearchTimer=setTimeout(()=>{
+    const hits=searchContacts(q).slice(0,8);
+    if(!hits.length){pr.style.display='none';return;}
+    pr.style.display='block';
+    pr.innerHTML=hits.map(h=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--gray-200);cursor:pointer" onclick="openLedger(${h.i});document.getElementById('persist-results').style.display='none';document.getElementById('search-input-persist').value=''">
+        <div class="avatar ${avatarCls(h.cat)}" style="width:32px;height:32px;min-width:32px;font-size:11px">${initials(h.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${h.name}</div>
+          <div style="font-size:11px;color:var(--gray-500)">${h.sub||'—'}</div>
+        </div>
+      </div>`).join('');
+  },200);
+}
+
+// Close persist dropdown on outside click
+document.addEventListener('click',e=>{
+  const pr=document.getElementById('persist-results');
+  const ps=document.getElementById('persistent-search');
+  if(pr&&ps&&!ps.contains(e.target))pr.style.display='none';
+});
+
 // ─── LEDGER ───────────────────────────────────────────────────────────────────
-function openLedger(idx) {
-  ledgerHistory.push({ tab: activeTab, scrollY: window.scrollY });
-  currentContactIdx = idx;
-  currentAcctId = normId(get(contactRows[idx], contactHdr, 'accountid'));
-  emailCheckboxes = {};
+function openLedger(idx,fromSearch){
+  ledgerHistory.push({tab:activeTab,scrollY:window.scrollY});
+  currentContactIdx=idx;
+  currentAcctId=normId(get(contactRows[idx],contactHdr,'accountid'));
+  emailCheckboxes={};
   renderLedger(idx);
-  document.getElementById('tab-lookup-content').style.display = 'none';
-  document.getElementById('tab-add-content').style.display = 'none';
-  document.getElementById('tab-sync-content').style.display = 'none';
-  document.getElementById('ledger-section').style.display = 'block';
+  ['lookup','query','add','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
+  document.getElementById('ledger-section').style.display='block';
   document.getElementById('edit-panel').classList.remove('open');
   document.getElementById('email-panel').classList.remove('open');
-  window.scrollTo(0, 0);
-  // Kick off lazy detail load
-  requestAnimationFrame(() => loadAndInjectDetails(currentAcctId));
+  // Show persistent search
+  document.getElementById('persistent-search').style.display='block';
+  document.getElementById('search-input-persist').value='';
+  document.getElementById('persist-results').style.display='none';
+  window.scrollTo(0,0);
+  requestAnimationFrame(()=>loadAndInjectDetails(currentAcctId));
 }
 
-function goBack() {
-  const prev = ledgerHistory.pop();
-  document.getElementById('ledger-section').style.display = 'none';
-  if (prev) {
-    showTab(prev.tab);
-    setTimeout(() => window.scrollTo(0, prev.scrollY || 0), 50);
-  } else {
-    showTab('lookup');
-  }
+function goBack(){
+  const prev=ledgerHistory.pop();
+  document.getElementById('ledger-section').style.display='none';
+  document.getElementById('persistent-search').style.display='none';
+  if(prev){showTab(prev.tab);setTimeout(()=>window.scrollTo(0,prev.scrollY||0),50);}
+  else showTab('lookup');
 }
 
-function renderLedger(idx) {
-  const r = contactRows[idx];
-  const name = get(r, contactHdr, 'name');
-  const cat = get(r, contactHdr, 'giving category');
-  const addr = get(r, contactHdr, 'address');
-  const phone = get(r, contactHdr, 'phone');
-  const email = get(r, contactHdr, 'email');
-  const category = get(r, contactHdr, 'category');
-  const lifetime = get(r, contactHdr, 'lifetime giving (if donor 4k+)');
-  const pattern = get(r, contactHdr, 'giving pattern');
-  const action = get(r, contactHdr, 'action plan');
-  const actionDate = get(r, contactHdr, 'action date');
-  const notes = get(r, contactHdr, 'notes');
-  const futureYrs = get(r, contactHdr, 'future pledge yrs');
-  const futureAmt = get(r, contactHdr, 'future pledge amt');
-  const totalCommit = get(r, contactHdr, 'total commitment');
-  const faulty = get(r, contactHdr, 'faulty phone or address');
-  const yahrFor = get(r, contactHdr, 'yahrtzeit for');
-  const yahr = get(r, contactHdr, 'yahrtzeit');
-  const acctId = normId(get(r, contactHdr, 'accountid'));
+// Section-specific edit fields
+const SECTION_FIELDS={
+  contact:[
+    {label:'Phone',key:'Phone'},
+    {label:'Address',key:'Address'},
+    {label:'Email',key:'Email'},
+    {label:'Faulty Phone or Address',key:'Faulty Phone or Address'},
+  ],
+  giving:[
+    {label:'Giving Category',key:'Giving Category'},
+    {label:'Action Plan',key:'Action Plan'},
+    {label:'Action Date',key:'Action Date'},
+    {label:'Notes',key:'Notes'},
+    {label:'Future Pledge Yrs',key:'Future Pledge Yrs'},
+    {label:'Future Pledge Amt',key:'Future Pledge Amt'},
+  ],
+  general:[
+    {label:'Giving Category',key:'Giving Category'},
+    {label:'Action Plan',key:'Action Plan'},
+    {label:'Action Date',key:'Action Date'},
+    {label:'Notes',key:'Notes'},
+    {label:'Future Pledge Yrs',key:'Future Pledge Yrs'},
+    {label:'Future Pledge Amt',key:'Future Pledge Amt'},
+    {label:'Phone',key:'Phone'},
+    {label:'Address',key:'Address'},
+    {label:'Email',key:'Email'},
+    {label:'Faulty Phone or Address',key:'Faulty Phone or Address'},
+  ],
+};
+
+function renderLedger(idx){
+  const r=contactRows[idx];
+  const name=get(r,contactHdr,'name');
+  const cat=get(r,contactHdr,'giving category');
+  const addr=get(r,contactHdr,'address');
+  const phone=get(r,contactHdr,'phone');
+  const email=get(r,contactHdr,'email');
+  const category=get(r,contactHdr,'category');
+  const lifetime=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+  const pattern=get(r,contactHdr,'giving pattern');
+  const action=get(r,contactHdr,'action plan');
+  const actionDate=get(r,contactHdr,'action date');
+  const notes=get(r,contactHdr,'notes');
+  const futureYrs=get(r,contactHdr,'future pledge yrs');
+  const futureAmt=get(r,contactHdr,'future pledge amt');
+  const totalCommit=get(r,contactHdr,'total commitment');
+  const faulty=get(r,contactHdr,'faulty phone or address');
+  const yahrFor=get(r,contactHdr,'yahrtzeit for');
+  const yahr=get(r,contactHdr,'yahrtzeit');
+  const acctId=normId(get(r,contactHdr,'accountid'));
 
   // Relationships
-  const relIdxs = relByAcct.get(acctId) || [];
-  const seen = new Map();
-  relIdxs.forEach(ri => {
-    const rr = relRows[ri];
-    const isA = normId(get(rr, relHdr, 'persona_accountid')) === acctId;
-    const otherName = get(rr, relHdr, isA ? 'personb_name' : 'persona_name');
-    const relType = get(rr, relHdr, 'relationshiptype');
-    const bday = get(rr, relHdr, 'birthday');
-    const anniv = get(rr, relHdr, 'anniversary');
-    const otherId = normId(get(rr, relHdr, isA ? 'personb_accountid' : 'persona_accountid'));
-    const key = relType + '|' + otherName;
-    if (!seen.has(key)) seen.set(key, { relType, otherName, otherId, bday, anniv });
+  const relIdxs=relByAcct.get(acctId)||[];
+  const seen=new Map();
+  relIdxs.forEach(ri=>{
+    const rr=relRows[ri];
+    const isA=normId(get(rr,relHdr,'persona_accountid'))===acctId;
+    const otherName=get(rr,relHdr,isA?'personb_name':'persona_name');
+    const relType=get(rr,relHdr,'relationshiptype');
+    const bday=get(rr,relHdr,'birthday');
+    const anniv=get(rr,relHdr,'anniversary');
+    const otherId=normId(get(rr,relHdr,isA?'personb_accountid':'persona_accountid'));
+    const key=relType+'|'+otherName;
+    if(!seen.has(key))seen.set(key,{relType,otherName,otherId,bday,anniv});
   });
-  const rels = [...seen.values()];
+  const rels=[...seen.values()];
 
-  // Collect emails for checkboxes
-  const emailPool = [];
-  const addEmail = (e, label) => { if (e && !emailPool.find(x => x.e === e)) emailPool.push({ e, label }); };
-  (email || '').split(';').map(s => s.trim()).filter(Boolean).forEach(e => addEmail(e, name));
-  rels.forEach(({ relType, otherName, otherId }) => {
-    // Try to find their email from contacts or students
-    const ci = contactByAcct.get(otherId);
-    if (ci !== undefined) {
-      const ce = get(contactRows[ci], contactHdr, 'email');
-      (ce || '').split(';').map(s => s.trim()).filter(Boolean).forEach(e => addEmail(e, `${otherName} (${relType})`));
-    }
-    const sis = studentByAcct.get(otherId) || [];
-    sis.forEach(si => {
-      const se = get(studentRows[si], studentHdr, 'email');
-      (se || '').split(';').map(s => s.trim()).filter(Boolean).forEach(e => addEmail(e, `${otherName} (${relType})`));
-    });
+  // Email pool
+  const emailPool=[];
+  const addEmail=(e,label)=>{if(e&&!emailPool.find(x=>x.e===e))emailPool.push({e,label});};
+  (email||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,name));
+  rels.forEach(({relType,otherName,otherId})=>{
+    const ci=contactByAcct.get(otherId);
+    if(ci!==undefined){const ce=get(contactRows[ci],contactHdr,'email');(ce||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,`${otherName} (${relType})`));}
+    const sis=studentByAcct.get(otherId)||[];
+    sis.forEach(si=>{const se=get(studentRows[si],studentHdr,'email');(se||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,`${otherName} (${relType})`));});
   });
 
-  // Dedications
-  const dedIdxs = dedByAcct.get(acctId) || [];
+  const dedIdxs=dedByAcct.get(acctId)||[];
+  const doIdx=donOvByAcct.get(acctId);
+  const doRow=doIdx!==undefined?donOvRows[doIdx]:null;
 
-  // Donations Overview
-  const doIdx = donOvByAcct.get(acctId);
-  const doRow = doIdx !== undefined ? donOvRows[doIdx] : null;
+  // Year grid
+  const YEARS=[];for(let y=2002;y<=2026;y++)YEARS.push(y);
+  let yrCells='';let hasAnyYear=false;
+  if(doRow){YEARS.forEach(y=>{const v=parseFloat(get(doRow,donOvHdr,String(y)))||0;if(v>0){hasAnyYear=true;const disp=v>=1000?'$'+Math.round(v/1000)+'k':'$'+Math.round(v);yrCells+=`<div class="yr-cell hit"><div class="y">'${String(y).slice(2)}</div><div class="a">${disp}</div></div>`;}});}
 
-  // Year grid (2002–2026, only non-zero)
-  const YEARS = [];
-  for (let y = 2002; y <= 2026; y++) YEARS.push(y);
-  let yrCells = '';
-  let hasAnyYear = false;
-  if (doRow) {
-    YEARS.forEach(y => {
-      const v = parseFloat(get(doRow, donOvHdr, String(y))) || 0;
-      if (v > 0) {
-        hasAnyYear = true;
-        const disp = v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + Math.round(v);
-        yrCells += `<div class="yr-cell hit"><div class="y">'${String(y).slice(2)}</div><div class="a">${disp}</div></div>`;
-      }
-    });
-  }
+  const donLife=doRow?fmt$(get(doRow,donOvHdr,'lifetime giving')):fmt$(lifetime);
+  const donFirst=doRow?get(doRow,donOvHdr,'first gift year'):'';
+  const donLast=doRow?get(doRow,donOvHdr,'last gift year'):'';
+  const donYrs=doRow?get(doRow,donOvHdr,'years given'):'';
+  const donLargest=doRow?fmt$(get(doRow,donOvHdr,'largest gift')):'';
+  const donLargestYr=doRow?get(doRow,donOvHdr,'largest gift year'):'';
+  const donLastAmt=doRow?fmt$(get(doRow,donOvHdr,'last gift amount')):'';
+  const donCat=doRow?(get(doRow,donOvHdr,'giving category')||cat):cat;
+  const donPattern=doRow?(get(doRow,donOvHdr,'giving pattern')||pattern):pattern;
+  const donFutYrs=doRow?get(doRow,donOvHdr,'future pledge yrs'):futureYrs;
+  const donFutAmt=doRow?fmt$(get(doRow,donOvHdr,'future pledge amt')):fmt$(futureAmt);
 
-  // Donation summary from overview
-  const donLife = doRow ? fmt$(get(doRow, donOvHdr, 'lifetime giving')) : fmt$(lifetime);
-  const donFirst = doRow ? get(doRow, donOvHdr, 'first gift year') : '';
-  const donLast = doRow ? get(doRow, donOvHdr, 'last gift year') : '';
-  const donYrs = doRow ? get(doRow, donOvHdr, 'years given') : '';
-  const donLargest = doRow ? fmt$(get(doRow, donOvHdr, 'largest gift')) : '';
-  const donLargestYr = doRow ? get(doRow, donOvHdr, 'largest gift year') : '';
-  const donLastAmt = doRow ? fmt$(get(doRow, donOvHdr, 'last gift amount')) : '';
-  const donCat = doRow ? (get(doRow, donOvHdr, 'giving category') || cat) : cat;
-  const donPattern = doRow ? (get(doRow, donOvHdr, 'giving pattern') || pattern) : pattern;
-  const donFutYrs = doRow ? get(doRow, donOvHdr, 'future pledge yrs') : futureYrs;
-  const donFutAmt = doRow ? fmt$(get(doRow, donOvHdr, 'future pledge amt')) : fmt$(futureAmt);
-
-  // Student records (as child of this contact = parent)
-  const childIdxs = studentByAcct.get('p:' + acctId) || [];
-  // Or if this contact IS a student
-  const ownStudentIdxs = studentByAcct.get(acctId) || [];
-
-  // Tuition overview
-  const tuiIdx = tuiOvByAcct.get(acctId);
-  const tuiRow = tuiIdx !== undefined ? tuiOvRows[tuiIdx] : null;
-  // Also check for children's tuition
-  const childTuiRows = childIdxs.map(si => {
-    const cid = normId(get(studentRows[si], studentHdr, 'accountid'));
-    const ti = tuiOvByAcct.get(cid);
-    return ti !== undefined ? { name: get(studentRows[si], studentHdr, 'name'), row: tuiOvRows[ti], acctId: cid } : null;
+  const childIdxs=studentByAcct.get('p:'+acctId)||[];
+  const ownStudentIdxs=studentByAcct.get(acctId)||[];
+  const tuiIdx=tuiOvByAcct.get(acctId);
+  const tuiRow=tuiIdx!==undefined?tuiOvRows[tuiIdx]:null;
+  const childTuiRows=childIdxs.map(si=>{
+    const cid=normId(get(studentRows[si],studentHdr,'accountid'));
+    const ti=tuiOvByAcct.get(cid);
+    return ti!==undefined?{name:get(studentRows[si],studentHdr,'name'),row:tuiOvRows[ti],acctId:cid}:null;
   }).filter(Boolean);
 
-  function renderTuiRow(tuiR, label) {
-    if (!tuiR) return '';
-    const subtotal = fmt$(get(tuiR, tuiOvHdr, 'subtotal tuition paid'));
-    const total = fmt$(get(tuiR, tuiOvHdr, 'total tuittion paid') || get(tuiR, tuiOvHdr, 'total tuition paid'));
-    // Year columns (anything matching pattern "YYYY/YY FeeType")
-    let yearLines = '';
-    Object.keys(tuiOvHdr).forEach(k => {
-      const m = k.match(/^(\d{4}\/\d{2})\s+(.+)$/);
-      if (!m) return;
-      const v = parseFloat(tuiR[tuiOvHdr[k]]) || 0;
-      if (v > 0) yearLines += `<div class="field-row"><span class="field-label">${m[1]} ${m[2]}</span><span class="field-value money">${fmt$(v)}</span></div>`;
-    });
-    return `
-      ${label ? `<div style="font-size:12px;font-weight:600;color:var(--navy);margin:8px 0 4px">${label}</div>` : ''}
-      <div class="stat-row">
-        <div class="stat-box"><div class="s-label">Subtotal Paid</div><div class="s-value">${subtotal || '—'}</div></div>
-        <div class="stat-box"><div class="s-label">Total Paid</div><div class="s-value">${total || '—'}</div></div>
-      </div>
-      ${yearLines}`;
+  function renderTuiRow(tuiR,label){
+    if(!tuiR)return'';
+    const subtotal=fmt$(get(tuiR,tuiOvHdr,'subtotal tuition paid'));
+    const total=fmt$(get(tuiR,tuiOvHdr,'total tuittion paid')||get(tuiR,tuiOvHdr,'total tuition paid'));
+    let yearLines='';
+    Object.keys(tuiOvHdr).forEach(k=>{const m=k.match(/^(\d{4}\/\d{2})\s+(.+)$/);if(!m)return;const v=parseFloat(tuiR[tuiOvHdr[k]])||0;if(v>0)yearLines+=`<div class="field-row"><span class="field-label">${m[1]} ${m[2]}</span><span class="field-value money">${fmt$(v)}</span></div>`;});
+    return`${label?`<div style="font-size:12px;font-weight:600;color:var(--navy);margin:8px 0 4px">${label}</div>`:''}
+      <div class="stat-row"><div class="stat-box"><div class="s-label">Subtotal Paid</div><div class="s-value">${subtotal||'—'}</div></div><div class="stat-box"><div class="s-label">Total Paid</div><div class="s-value">${total||'—'}</div></div></div>${yearLines}`;
   }
 
-  const html = `
+  // Helper for section edit button
+  function secEditBtn(section){
+    return`<button class="sec-edit-btn" onclick="openEdit('${section}')">✏️ Edit</button>`;
+  }
+
+  const html=`
     <div class="ledger-card">
       <div class="ledger-hero">
         <div class="avatar-hero">${initials(name)}</div>
         <div style="flex:1;min-width:0">
           <div class="hero-name">${name}</div>
-          <div class="hero-sub">${category || ''}${addr ? ' · ' + addr.split(',').slice(1, 3).join(',').trim() : ''}</div>
-          ${cat ? `<span class="hero-pill ${pillCls(cat)}">${pillLabel(cat)}</span>` : ''}
+          <div class="hero-sub">${category||''}${addr?' · '+addr.split(',').slice(1,3).join(',').trim():''}</div>
+          ${cat?`<span class="hero-pill ${pillCls(cat)}">${pillLabel(cat)}</span>`:''}
         </div>
-        <button onclick="openEdit()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;cursor:pointer;flex-shrink:0">✏️ Edit</button>
       </div>
       <div class="ledger-body">
 
         <!-- CONTACT INFO -->
-        <div class="sec-title">Contact</div>
-        ${phone ? phone.split(';').map(p => `<div class="field-row"><span class="field-label">Phone</span><span class="field-value">${p.trim()}</span></div>`).join('') : ''}
-        ${addr ? `<div class="field-row"><span class="field-label">Address</span><span class="field-value">${addr}</span></div>` : ''}
-        ${faulty ? `<div class="field-row"><span class="field-label">⚠️ Faulty</span><span class="field-value" style="color:#A32D2D">${faulty}</span></div>` : ''}
+        <div class="sec-title"><span>Contact</span>${secEditBtn('contact')}</div>
+        ${phone?phone.split(';').map(p=>`<div class="field-row"><span class="field-label">Phone</span><span class="field-value">${p.trim()}</span></div>`).join(''):''}
+        ${addr?`<div class="field-row"><span class="field-label">Address</span><span class="field-value">${addr}</span></div>`:''}
+        ${faulty?`<div class="field-row"><span class="field-label">⚠️ Faulty</span><span class="field-value" style="color:#A32D2D">${faulty}</span></div>`:''}
+        ${(!phone&&!addr&&!faulty)?`<div style="font-size:12px;color:var(--gray-500)">No contact info on file.</div>`:''}
 
         <!-- EMAIL -->
-        ${emailPool.length ? `
-        <div class="sec-title">Email</div>
-        ${emailPool.map(({ e, label }) => `
+        ${emailPool.length?`
+        <div class="sec-title"><span>Email</span></div>
+        ${emailPool.map(({e,label})=>`
           <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-200);cursor:pointer">
             <input type="checkbox" class="rel-check" id="ec-${e.replace(/[^a-z0-9]/gi,'_')}" onchange="toggleEmailCheck('${e.replace(/'/g,"\\'")}',this.checked)" />
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:600">${e}</div>
-              <div style="font-size:11px;color:var(--gray-500)">${label}</div>
-            </div>
+            <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${e}</div><div style="font-size:11px;color:var(--gray-500)">${label}</div></div>
           </label>`).join('')}
-        <div class="btn-row" style="margin-top:8px">
-          <button class="btn btn-primary btn-sm" onclick="openEmailPanel()">✉️ Email selected</button>
-        </div>` : ''}
+        <div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="openEmailPanel()">✉️ Email selected</button></div>`:''}
 
         <!-- RELATIONSHIPS -->
-        <div class="sec-title">Relationships</div>
-        ${rels.length ? rels.map(({ relType, otherName, bday, anniv }) => `
-          <div class="rel-item">
+        <div class="sec-title"><span>Relationships</span></div>
+        ${rels.length?rels.map(({relType,otherName,otherId,bday,anniv})=>{
+          const hasProfile=contactByAcct.has(otherId);
+          const contactIdx=hasProfile?contactByAcct.get(otherId):-1;
+          return`<div class="rel-item">
             <div class="rel-info">
-              <div class="rel-name">${otherName}</div>
+              <div class="rel-name ${hasProfile?'clickable':''}" ${hasProfile?`onclick="openLedger(${contactIdx})"`:''}>${otherName}${hasProfile?' ›':''}</div>
               <div class="rel-type">${relType}</div>
-              ${bday ? `<div class="rel-contact">🎂 ${bday}</div>` : ''}
-              ${anniv ? `<div class="rel-contact">💍 ${anniv}</div>` : ''}
+              ${bday?`<div class="rel-contact">🎂 ${bday}</div>`:''}
+              ${anniv?`<div class="rel-contact">💍 ${anniv}</div>`:''}
             </div>
-          </div>`).join('') : '<div style="font-size:12px;color:var(--gray-500)">No relationships on file.</div>'}
+          </div>`;}).join(''):'<div style="font-size:12px;color:var(--gray-500)">No relationships on file.</div>'}
 
         <!-- GIVING SUMMARY -->
-        <div class="sec-title" style="margin-top:14px">Giving Summary</div>
-        ${donCat ? `<div class="field-row"><span class="field-label">Category</span><span class="field-value"><span class="hero-pill ${pillCls(donCat)}" style="margin:0">${pillLabel(donCat)}</span></span></div>` : ''}
-        ${donPattern ? `<div class="field-row"><span class="field-label">Pattern</span><span class="field-value" style="font-size:11px">${donPattern}</span></div>` : ''}
+        <div class="sec-title" style="margin-top:14px"><span>Giving Summary</span>${secEditBtn('giving')}</div>
+        ${donCat?`<div class="field-row"><span class="field-label">Category</span><span class="field-value"><span class="hero-pill ${pillCls(donCat)}" style="margin:0">${pillLabel(donCat)}</span></span></div>`:''}
+        ${donPattern?`<div class="field-row"><span class="field-label">Pattern</span><span class="field-value" style="font-size:11px">${donPattern}</span></div>`:''}
         <div class="stat-row">
-          <div class="stat-box"><div class="s-label">Lifetime</div><div class="s-value">${donLife || '—'}</div></div>
-          <div class="stat-box"><div class="s-label">Last Gift</div><div class="s-value">${donLastAmt || '—'}</div><div class="s-sub">${donLast}</div></div>
-          <div class="stat-box"><div class="s-label">Largest Gift</div><div class="s-value">${donLargest || '—'}</div><div class="s-sub">${donLargestYr}</div></div>
-          <div class="stat-box"><div class="s-label">Years Given</div><div class="s-value">${donYrs || '—'}</div><div class="s-sub">${donFirst && donLast ? donFirst + '–' + donLast : ''}</div></div>
+          <div class="stat-box"><div class="s-label">Lifetime</div><div class="s-value">${donLife||'—'}</div></div>
+          <div class="stat-box"><div class="s-label">Last Gift</div><div class="s-value">${donLastAmt||'—'}</div><div class="s-sub">${donLast}</div></div>
+          <div class="stat-box"><div class="s-label">Largest Gift</div><div class="s-value">${donLargest||'—'}</div><div class="s-sub">${donLargestYr}</div></div>
+          <div class="stat-box"><div class="s-label">Years Given</div><div class="s-value">${donYrs||'—'}</div><div class="s-sub">${donFirst&&donLast?donFirst+'–'+donLast:''}</div></div>
         </div>
-        ${donFutAmt ? `<div class="field-row"><span class="field-label">Future Pledge</span><span class="field-value money">${donFutAmt}${donFutYrs ? ' <span style="font-size:11px;font-weight:400;color:var(--gray-500)">(' + donFutYrs + ')</span>' : ''}</span></div>` : ''}
-        ${totalCommit || get(doRow||[], donOvHdr, 'total commitment') ? `<div class="field-row"><span class="field-label">Total Commitment</span><span class="field-value money">${fmt$(totalCommit || get(doRow||[], donOvHdr, 'total commitment'))}</span></div>` : ''}
-        ${action ? `<div class="field-row"><span class="field-label">Action Plan</span><span class="field-value">${action}</span></div>` : ''}
-        ${actionDate ? `<div class="field-row"><span class="field-label">Action Date</span><span class="field-value">${actionDate}</span></div>` : ''}
-        ${notes ? `<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes}</span></div>` : ''}
-        ${(yahrFor || yahr) ? `<div class="field-row"><span class="field-label">Yahrtzeit</span><span class="field-value">${yahr}${yahrFor ? ' · ' + yahrFor : ''}</span></div>` : ''}
+        ${donFutAmt?`<div class="field-row"><span class="field-label">Future Pledge</span><span class="field-value money">${donFutAmt}${donFutYrs?' <span style="font-size:11px;font-weight:400;color:var(--gray-500)">('+donFutYrs+')</span>':''}</span></div>`:''}
+        ${totalCommit||get(doRow||[],donOvHdr,'total commitment')?`<div class="field-row"><span class="field-label">Total Commitment</span><span class="field-value money">${fmt$(totalCommit||get(doRow||[],donOvHdr,'total commitment'))}</span></div>`:''}
+        ${action?`<div class="field-row"><span class="field-label">Action Plan</span><span class="field-value">${action}</span></div>`:''}
+        ${actionDate?`<div class="field-row"><span class="field-label">Action Date</span><span class="field-value">${actionDate}</span></div>`:''}
+        ${notes?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes}</span></div>`:''}
+        ${(yahrFor||yahr)?`<div class="field-row"><span class="field-label">Yahrtzeit</span><span class="field-value">${yahr}${yahrFor?' · '+yahrFor:''}</span></div>`:''}
 
         <!-- YEAR GRID -->
-        ${hasAnyYear ? `
-        <div class="sec-title">Year by Year (non-zero only)</div>
-        <div class="giving-grid">${yrCells}</div>` : ''}
+        ${hasAnyYear?`<div class="sec-title"><span>Year by Year (non-zero only)</span></div><div class="giving-grid">${yrCells}</div>`:''}
 
-        <!-- DONATION DETAIL (expandable) -->
-        <div class="sec-title">
-          <span>Donation Payments</span>
-          <button class="expand-btn" onclick="toggleExpand('don-det')">▶ Show detail</button>
-        </div>
-        <div id="don-det" class="expand-section">
-          <div id="don-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div>
-        </div>
+        <!-- DONATION DETAIL -->
+        <div class="sec-title"><span>Donation Payments</span><button class="expand-btn" onclick="toggleExpand('don-det')">▶ Show detail</button></div>
+        <div id="don-det" class="expand-section"><div id="don-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div></div>
 
         <!-- STUDENT INFO -->
-        ${(childIdxs.length || ownStudentIdxs.length) ? `
-        <div class="sec-title">Student / Program Info</div>
-        ${[...ownStudentIdxs, ...childIdxs].map(si => {
-          const sr = studentRows[si];
-          const sname = get(sr, studentHdr, 'name');
-          const prog = get(sr, studentHdr, 'programhistory');
-          const recent = get(sr, studentHdr, 'mostrecentprogram');
-          const recentYr = get(sr, studentHdr, 'mostrecentyear');
-          const status = get(sr, studentHdr, 'status');
-          const mil = get(sr, studentHdr, 'militarystatus');
-          const post = get(sr, studentHdr, 'postprogram');
-          const solRav = get(sr, studentHdr, 'sol_rav');
-          const city = get(sr, studentHdr, 'city');
-          const state = get(sr, studentHdr, 'state');
-          const ph1 = get(sr, studentHdr, 'phone1');
-          const ph2 = get(sr, studentHdr, 'phone2');
-          const semail = get(sr, studentHdr, 'email');
-          const hesder = get(sr, studentHdr, 'hesder');
-          const idfLlc = get(sr, studentHdr, 'did idf through llc');
-          return `<div style="background:var(--gray-100);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px">
+        ${(childIdxs.length||ownStudentIdxs.length)?`
+        <div class="sec-title"><span>Student / Program Info</span></div>
+        ${[...ownStudentIdxs,...childIdxs].map(si=>{
+          const sr=studentRows[si];
+          const sname=get(sr,studentHdr,'name');
+          const prog=get(sr,studentHdr,'programhistory');
+          const recent=get(sr,studentHdr,'mostrecentprogram');
+          const recentYr=get(sr,studentHdr,'mostrecentyear');
+          const status=get(sr,studentHdr,'status');
+          const mil=get(sr,studentHdr,'militarystatus');
+          const post=get(sr,studentHdr,'postprogram');
+          const solRav=get(sr,studentHdr,'sol_rav');
+          const city=get(sr,studentHdr,'city');
+          const state=get(sr,studentHdr,'state');
+          const ph1=get(sr,studentHdr,'phone1');
+          const ph2=get(sr,studentHdr,'phone2');
+          const semail=get(sr,studentHdr,'email');
+          const hesder=get(sr,studentHdr,'hesder');
+          const idfLlc=get(sr,studentHdr,'did idf through llc');
+          return`<div style="background:var(--gray-100);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px">
             <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:6px">${sname}</div>
-            ${prog ? `<div class="field-row"><span class="field-label">Programs</span><span class="field-value" style="font-size:11px">${prog}</span></div>` : ''}
-            ${recent ? `<div class="field-row"><span class="field-label">Most Recent</span><span class="field-value">${recent}${recentYr ? ' (' + recentYr + ')' : ''}</span></div>` : ''}
-            ${status ? `<div class="field-row"><span class="field-label">Status</span><span class="field-value">${status}</span></div>` : ''}
-            ${mil ? `<div class="field-row"><span class="field-label">Military</span><span class="field-value">${mil}</span></div>` : ''}
-            ${post ? `<div class="field-row"><span class="field-label">Post-Program</span><span class="field-value">${post}</span></div>` : ''}
-            ${solRav ? `<div class="field-row"><span class="field-label">Soliciting Rav</span><span class="field-value">${solRav}</span></div>` : ''}
-            ${(city || state) ? `<div class="field-row"><span class="field-label">City / State</span><span class="field-value">${[city, state].filter(Boolean).join(', ')}</span></div>` : ''}
-            ${ph1 ? `<div class="field-row"><span class="field-label">Phone</span><span class="field-value">${ph1}${ph2 ? ' · ' + ph2 : ''}</span></div>` : ''}
-            ${semail ? `<div class="field-row"><span class="field-label">Email</span><span class="field-value">${semail}</span></div>` : ''}
-            ${hesder ? `<div class="field-row"><span class="field-label">Hesder</span><span class="field-value">${hesder}</span></div>` : ''}
-            ${idfLlc ? `<div class="field-row"><span class="field-label">IDF via LLC</span><span class="field-value">${idfLlc}</span></div>` : ''}
-          </div>`;
-        }).join('')}` : ''}
+            ${prog?`<div class="field-row"><span class="field-label">Programs</span><span class="field-value" style="font-size:11px">${prog}</span></div>`:''}
+            ${recent?`<div class="field-row"><span class="field-label">Most Recent</span><span class="field-value">${recent}${recentYr?' ('+recentYr+')':''}</span></div>`:''}
+            ${status?`<div class="field-row"><span class="field-label">Status</span><span class="field-value">${status}</span></div>`:''}
+            ${mil?`<div class="field-row"><span class="field-label">Military</span><span class="field-value">${mil}</span></div>`:''}
+            ${post?`<div class="field-row"><span class="field-label">Post-Program</span><span class="field-value">${post}</span></div>`:''}
+            ${solRav?`<div class="field-row"><span class="field-label">Soliciting Rav</span><span class="field-value">${solRav}</span></div>`:''}
+            ${(city||state)?`<div class="field-row"><span class="field-label">City / State</span><span class="field-value">${[city,state].filter(Boolean).join(', ')}</span></div>`:''}
+            ${ph1?`<div class="field-row"><span class="field-label">Phone</span><span class="field-value">${ph1}${ph2?' · '+ph2:''}</span></div>`:''}
+            ${semail?`<div class="field-row"><span class="field-label">Email</span><span class="field-value">${semail}</span></div>`:''}
+            ${hesder?`<div class="field-row"><span class="field-label">Hesder</span><span class="field-value">${hesder}</span></div>`:''}
+            ${idfLlc?`<div class="field-row"><span class="field-label">IDF via LLC</span><span class="field-value">${idfLlc}</span></div>`:''}
+          </div>`;}).join('')}`:''}
 
         <!-- TUITION OVERVIEW -->
-        ${(tuiRow || childTuiRows.length) ? `
-        <div class="sec-title">Tuition Overview</div>
-        ${tuiRow ? renderTuiRow(tuiRow, '') : ''}
-        ${childTuiRows.map(({ name: cn, row: cr }) => renderTuiRow(cr, cn)).join('')}` : ''}
+        ${(tuiRow||childTuiRows.length)?`<div class="sec-title"><span>Tuition Overview</span></div>${tuiRow?renderTuiRow(tuiRow,''):''}${childTuiRows.map(({name:cn,row:cr})=>renderTuiRow(cr,cn)).join('')}`:''}
 
-        <!-- TUITION DETAIL (expandable) -->
-        <div class="sec-title">
-          <span>Tuition Payments</span>
-          <button class="expand-btn" onclick="toggleExpand('tui-det')">▶ Show detail</button>
-        </div>
-        <div id="tui-det" class="expand-section">
-          <div id="tui-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div>
-        </div>
+        <!-- TUITION DETAIL -->
+        <div class="sec-title"><span>Tuition Payments</span><button class="expand-btn" onclick="toggleExpand('tui-det')">▶ Show detail</button></div>
+        <div id="tui-det" class="expand-section"><div id="tui-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div></div>
 
         <!-- DEDICATIONS -->
-        <div class="sec-title">Dedications</div>
-        ${dedIdxs.length ? dedIdxs.map(di => {
-          const dr = dedRows[di];
-          const item = get(dr, dedHdr, 'dedication item');
-          const status = get(dr, dedHdr, 'status');
-          const text = get(dr, dedHdr, 'dedication text');
-          const notes2 = get(dr, dedHdr, 'notes');
-          const flags = get(dr, dedHdr, 'flags');
-          const hasTxt = !!(text || '').trim();
-          return `<div style="background:var(--gray-100);border-left:3px solid var(--navy);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px">
-            <div class="field-row"><span class="field-label">Item</span><span class="field-value">${item || '—'}</span></div>
-            <div class="field-row"><span class="field-label">Status</span><span class="field-value">${status || '—'}</span></div>
-            <div class="field-row"><span class="field-label">Ded. Text</span><span class="field-value">
-              <span class="ded-check ${hasTxt ? 'yes' : 'no'}">${hasTxt ? '✓ Yes' : '✗ No'}</span>
-            </span></div>
-            ${notes2 ? `<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes2}</span></div>` : ''}
-            ${flags ? `<div class="field-row"><span class="field-label">Flags</span><span class="field-value" style="font-size:11px">${flags}</span></div>` : ''}
-          </div>`;
-        }).join('') : '<div style="font-size:12px;color:var(--gray-500)">No dedications on file.</div>'}
+        <div class="sec-title"><span>Dedications</span></div>
+        ${dedIdxs.length?dedIdxs.map(di=>{
+          const dr=dedRows[di];
+          const item=get(dr,dedHdr,'dedication item');
+          const status=get(dr,dedHdr,'status');
+          const text=get(dr,dedHdr,'dedication text');
+          const notes2=get(dr,dedHdr,'notes');
+          const flags=get(dr,dedHdr,'flags');
+          const hasTxt=!!(text||'').trim();
+          return`<div style="background:var(--gray-100);border-left:3px solid var(--navy);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px">
+            <div class="field-row"><span class="field-label">Item</span><span class="field-value">${item||'—'}</span></div>
+            <div class="field-row"><span class="field-label">Status</span><span class="field-value">${status||'—'}</span></div>
+            <div class="field-row"><span class="field-label">Ded. Text</span><span class="field-value"><span class="ded-check ${hasTxt?'yes':'no'}">${hasTxt?'✓ Yes':'✗ No'}</span></span></div>
+            ${notes2?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes2}</span></div>`:''}
+            ${flags?`<div class="field-row"><span class="field-label">Flags</span><span class="field-value" style="font-size:11px">${flags}</span></div>`:''}
+          </div>`;}).join(''):'<div style="font-size:12px;color:var(--gray-500)">No dedications on file.</div>'}
 
       </div>
     </div>`;
 
-  document.getElementById('ledger-content').innerHTML = html;
+  document.getElementById('ledger-content').innerHTML=html;
 }
 
 // ─── EXPAND TOGGLE ────────────────────────────────────────────────────────────
-function toggleExpand(id) {
-  const sec = document.getElementById(id);
-  const btn = sec.previousElementSibling.querySelector('.expand-btn');
-  const isOpen = sec.classList.contains('open');
-  sec.classList.toggle('open', !isOpen);
-  btn.textContent = isOpen ? '▶ Show detail' : '▼ Hide detail';
-  if (!isOpen) loadAndInjectDetails(currentAcctId);
+function toggleExpand(id){
+  const sec=document.getElementById(id);
+  const btn=sec.previousElementSibling.querySelector('.expand-btn');
+  const isOpen=sec.classList.contains('open');
+  sec.classList.toggle('open',!isOpen);
+  btn.textContent=isOpen?'▶ Show detail':'▼ Hide detail';
+  if(!isOpen)loadAndInjectDetails(currentAcctId);
 }
 
-async function loadAndInjectDetails(acctId) {
+async function loadAndInjectDetails(acctId){
   await ensureDetailLoaded();
-  // Donation detail
-  const donEl = document.getElementById('don-det-content');
-  if (donEl) {
-    const rows = donDetRows.filter(r => normId(get(r, donDetHdr, 'payeract_id')) === acctId);
-    donEl.innerHTML = rows.length ? renderDetailTable(rows, donDetHdr,
-      ['date','year','appliedto','appliedamount','method','cur_code','notes'],
-      ['Date','Year','Applied To','Amount','Method','Currency','Notes']
-    ) : '<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No donation payment records found.</div>';
+  const donEl=document.getElementById('don-det-content');
+  if(donEl){
+    const rows=donDetRows.filter(r=>normId(get(r,donDetHdr,'payeract_id'))===acctId);
+    donEl.innerHTML=rows.length?renderDetailTable(rows,donDetHdr,['date','year','appliedto','appliedamount','method','cur_code','notes'],['Date','Year','Applied To','Amount','Method','Currency','Notes']):'<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No donation payment records found.</div>';
   }
-  // Tuition detail — include children
-  const tuiEl = document.getElementById('tui-det-content');
-  if (tuiEl) {
-    const childIds = (studentByAcct.get('p:' + acctId) || []).map(si => normId(get(studentRows[si], studentHdr, 'accountid')));
-    const allIds = new Set([acctId, ...childIds]);
-    const rows = tuiDetRows.filter(r => allIds.has(normId(get(r, tuiDetHdr, 'payeract_id'))) || allIds.has(normId(get(r, tuiDetHdr, 'studentaccountid'))));
-    tuiEl.innerHTML = rows.length ? renderDetailTable(rows, tuiDetHdr,
-      ['date','year','program','payment cat.','appliedamount','method','cur_code','studentname','notes'],
-      ['Date','Year','Program','Type','Amount','Method','Cur','Student','Notes']
-    ) : '<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No tuition payment records found.</div>';
+  const tuiEl=document.getElementById('tui-det-content');
+  if(tuiEl){
+    const childIds=(studentByAcct.get('p:'+acctId)||[]).map(si=>normId(get(studentRows[si],studentHdr,'accountid')));
+    const allIds=new Set([acctId,...childIds]);
+    const rows=tuiDetRows.filter(r=>allIds.has(normId(get(r,tuiDetHdr,'payeract_id')))||allIds.has(normId(get(r,tuiDetHdr,'studentaccountid'))));
+    tuiEl.innerHTML=rows.length?renderDetailTable(rows,tuiDetHdr,['date','year','program','payment cat.','appliedamount','method','cur_code','studentname','notes'],['Date','Year','Program','Type','Amount','Method','Cur','Student','Notes']):'<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No tuition payment records found.</div>';
   }
 }
 
-function renderDetailTable(rows, hdrObj, keys, labels) {
-  const sorted = [...rows].sort((a, b) => {
-    const ya = parseInt(get(a, hdrObj, 'year')) || 0;
-    const yb = parseInt(get(b, hdrObj, 'year')) || 0;
-    return yb - ya;
-  });
-  const ths = labels.map(l => `<th>${l}</th>`).join('');
-  const tds = sorted.map(r => `<tr>${keys.map(k => `<td title="${get(r, hdrObj, k)}">${get(r, hdrObj, k)}</td>`).join('')}</tr>`).join('');
-  const total = sorted.reduce((s, r) => s + (parseFloat(get(r, hdrObj, 'appliedamount')) || 0), 0);
-  return `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-    <table class="detail-tbl">
-      <thead><tr>${ths}</tr></thead>
-      <tbody>${tds}</tbody>
-      <tfoot><tr><td colspan="${keys.length - 1}" style="font-weight:600;padding:5px 6px;font-size:11px">Total (${sorted.length} payments)</td><td style="font-weight:700;color:var(--blue);padding:5px 6px;font-size:11px">$${Math.round(total).toLocaleString()}</td></tr></tfoot>
-    </table>
-  </div>`;
+function renderDetailTable(rows,hdrObj,keys,labels){
+  const sorted=[...rows].sort((a,b)=>(parseInt(get(b,hdrObj,'year'))||0)-(parseInt(get(a,hdrObj,'year'))||0));
+  const total=sorted.reduce((s,r)=>s+(parseFloat(get(r,hdrObj,'appliedamount'))||0),0);
+  return`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="detail-tbl">
+    <thead><tr>${labels.map(l=>`<th>${l}</th>`).join('')}</tr></thead>
+    <tbody>${sorted.map(r=>`<tr>${keys.map(k=>`<td title="${get(r,hdrObj,k)}">${get(r,hdrObj,k)}</td>`).join('')}</tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="${keys.length-1}" style="font-weight:600;padding:5px 6px;font-size:11px">Total (${sorted.length} payments)</td><td style="font-weight:700;color:var(--blue);padding:5px 6px;font-size:11px">$${Math.round(total).toLocaleString()}</td></tr></tfoot>
+  </table></div>`;
 }
 
-// ─── EDIT ─────────────────────────────────────────────────────────────────────
-let editAcctId = '', editContactIdx = -1;
+// ─── EDIT (SECTION-AWARE) ─────────────────────────────────────────────────────
+let editContactIdx=-1;
 
-function openEdit() {
-  editAcctId = currentAcctId;
-  editContactIdx = currentContactIdx;
-  document.getElementById('edit-panel').classList.add('open');
-  document.getElementById('edit-field-sel').value = '';
-  document.getElementById('edit-current').textContent = '';
-  document.getElementById('edit-new').value = '';
+function openEdit(section){
+  editContactIdx=currentContactIdx;
+  const fields=SECTION_FIELDS[section]||SECTION_FIELDS.general;
+  const sel=document.getElementById('edit-field-sel');
+  sel.innerHTML='<option value="">— choose —</option>'+fields.map(f=>`<option value="${f.key}">${f.label}</option>`).join('');
+  document.getElementById('edit-panel-title').textContent='✏️ Edit '+(section==='contact'?'Contact Info':section==='giving'?'Giving Info':'Field');
+  document.getElementById('edit-current').textContent='';
+  document.getElementById('edit-new').value='';
   hideMsg('edit-msg');
-  document.getElementById('edit-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('edit-panel').classList.add('open');
+  document.getElementById('edit-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function closeEdit() { document.getElementById('edit-panel').classList.remove('open'); }
+function closeEdit(){document.getElementById('edit-panel').classList.remove('open');}
 
-function onEditFieldChange() {
-  const field = document.getElementById('edit-field-sel').value;
-  if (!field || editContactIdx < 0) return;
-  const r = contactRows[editContactIdx];
-  const cur = get(r, contactHdr, field) || get(r, contactHdr, field.toLowerCase());
-  document.getElementById('edit-current').textContent = cur || '(empty)';
-  document.getElementById('edit-new').value = cur;
+function onEditFieldChange(){
+  const field=document.getElementById('edit-field-sel').value;
+  if(!field||editContactIdx<0)return;
+  const r=contactRows[editContactIdx];
+  const cur=get(r,contactHdr,field)||get(r,contactHdr,field.toLowerCase());
+  document.getElementById('edit-current').textContent=cur||'(empty)';
+  document.getElementById('edit-new').value=cur;
 }
 
-async function saveEdit() {
-  const field = document.getElementById('edit-field-sel').value;
-  const newVal = document.getElementById('edit-new').value;
-  if (!field) { showMsg('edit-msg', 'Please choose a field.', 'error'); return; }
-  if (editContactIdx < 0) { showMsg('edit-msg', 'No contact loaded.', 'error'); return; }
-
-  // Find column index in sheet
-  const ci = col(contactHdr, field);
-  if (ci < 0) { showMsg('edit-msg', 'Column not found in sheet.', 'error'); return; }
-
-  if (isDemo) {
-    contactRows[editContactIdx][ci] = newVal;
-    showMsg('edit-msg', '✓ Updated locally (demo mode).', 'success');
+async function saveEdit(){
+  const field=document.getElementById('edit-field-sel').value;
+  const newVal=document.getElementById('edit-new').value;
+  if(!field){showMsg('edit-msg','Please choose a field.','error');return;}
+  if(editContactIdx<0){showMsg('edit-msg','No contact loaded.','error');return;}
+  const ci=col(contactHdr,field);
+  if(ci<0){showMsg('edit-msg','Column not found in sheet.','error');return;}
+  if(isDemo){contactRows[editContactIdx][ci]=newVal;showMsg('edit-msg','✓ Updated locally (demo mode).','success');renderLedger(editContactIdx);return;}
+  const sheetRow=editContactIdx+2;
+  const range=`${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(ci)}${sheetRow}`;
+  showMsg('edit-msg','Saving…','info');
+  try{
+    const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+      {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newVal]]})});
+    if(!res.ok){const d=await res.json();showMsg('edit-msg','Error: '+(d?.error?.message||res.status),'error');return;}
+    contactRows[editContactIdx][ci]=newVal;
+    showMsg('edit-msg','✓ Saved to sheet!','success');
     renderLedger(editContactIdx);
-    return;
-  }
-
-  // Find actual row number in sheet (header is row 1, data starts row 2)
-  const sheetRow = editContactIdx + 2;
-  const range = `${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(ci)}${sheetRow}`;
-  showMsg('edit-msg', 'Saving…', 'info');
-  try {
-    const res = await authedFetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
-      { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[newVal]] }) }
-    );
-    if (!res.ok) { const d = await res.json(); showMsg('edit-msg', 'Error: ' + (d?.error?.message || res.status), 'error'); return; }
-    contactRows[editContactIdx][ci] = newVal;
-    showMsg('edit-msg', '✓ Saved to sheet!', 'success');
-    renderLedger(editContactIdx);
-  } catch (e) { showMsg('edit-msg', 'Network error: ' + e.message, 'error'); }
+  }catch(e){showMsg('edit-msg','Network error: '+e.message,'error');}
 }
 
 // ─── EMAIL ────────────────────────────────────────────────────────────────────
-function toggleEmailCheck(email, checked) {
-  emailCheckboxes[email] = checked;
-}
+function toggleEmailCheck(email,checked){emailCheckboxes[email]=checked;}
 
-function openEmailPanel() {
-  const selected = Object.entries(emailCheckboxes).filter(([, v]) => v).map(([e]) => e);
-  if (!selected.length) { alert('Please check at least one email address first.'); return; }
-  document.getElementById('email-recipients-label').textContent = 'To: ' + selected.join(', ');
-  document.getElementById('email-subject').value = '';
-  document.getElementById('email-body').value = '';
+function openEmailPanel(){
+  const selected=Object.entries(emailCheckboxes).filter(([,v])=>v).map(([e])=>e);
+  if(!selected.length){alert('Please check at least one email address first.');return;}
+  document.getElementById('email-recipients-label').textContent='To: '+selected.join(', ');
+  document.getElementById('email-subject').value='';document.getElementById('email-body').value='';
   hideMsg('email-msg');
   document.getElementById('email-panel').classList.add('open');
-  document.getElementById('email-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('email-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function closeEmailPanel() { document.getElementById('email-panel').classList.remove('open'); }
+function closeEmailPanel(){document.getElementById('email-panel').classList.remove('open');}
 
-async function sendEmail() {
-  const subject = (document.getElementById('email-subject').value || '').trim();
-  const body = (document.getElementById('email-body').value || '').trim();
-  if (!subject || !body) { showMsg('email-msg', 'Please enter subject and body.', 'error'); return; }
-  const selected = Object.entries(emailCheckboxes).filter(([, v]) => v).map(([e]) => e);
-  if (!selected.length) { showMsg('email-msg', 'No recipients selected.', 'error'); return; }
-
-  if (isDemo) { showMsg('email-msg', `Demo: would create ${selected.length} draft(s) to ${selected.join(', ')}.`, 'info'); return; }
-
-  showMsg('email-msg', `Creating ${selected.length} draft(s)…`, 'info');
-  let created = 0, failed = 0;
-  for (const toEmail of selected) {
-    const raw = `To: ${toEmail}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`;
-    const encoded = btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    try {
-      const res = await authedFetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: { raw: encoded } })
-      });
-      if (res.ok) created++; else failed++;
-    } catch { failed++; }
+async function sendEmail(){
+  const subject=(document.getElementById('email-subject').value||'').trim();
+  const body=(document.getElementById('email-body').value||'').trim();
+  if(!subject||!body){showMsg('email-msg','Please enter subject and body.','error');return;}
+  const selected=Object.entries(emailCheckboxes).filter(([,v])=>v).map(([e])=>e);
+  if(!selected.length){showMsg('email-msg','No recipients selected.','error');return;}
+  if(isDemo){showMsg('email-msg',`Demo: would create ${selected.length} draft(s) to ${selected.join(', ')}.`,'info');return;}
+  showMsg('email-msg',`Creating ${selected.length} draft(s)…`,'info');
+  let created=0,failed=0;
+  for(const toEmail of selected){
+    const raw=`To: ${toEmail}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`;
+    const encoded=btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    try{const res=await authedFetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:{raw:encoded}})});if(res.ok)created++;else failed++;}
+    catch{failed++;}
   }
-  if (created > 0) showMsg('email-msg', `✓ Created ${created} draft(s) in Gmail!${failed ? ' (' + failed + ' failed)' : ''}`, 'success');
-  else showMsg('email-msg', 'Failed to create drafts. Check Gmail API is enabled.', 'error');
+  if(created>0)showMsg('email-msg',`✓ Created ${created} draft(s) in Gmail!${failed?' ('+failed+' failed)':''},'success');
+  else showMsg('email-msg','Failed to create drafts. Check Gmail API is enabled.','error');
+}
+
+// ─── QUERY TAB ────────────────────────────────────────────────────────────────
+let qfActive={};
+
+function qfToggle(el){
+  el.parentElement.classList.toggle('on',el.checked);
+  if(el.checked)qfActive[el.value]=true;else delete qfActive[el.value];
+  runQuery();
+}
+
+function runQuery(){
+  const text=(document.getElementById('qf-text').value||'').trim().toLowerCase();
+  const cats=Object.keys(qfActive).filter(k=>['ACTIVE_LOYAL','ACTIVE_CONSISTENT','RECENTLY_LAPSED','LAPSED_REENGAGEABLE','LAPSED_LONG','ONE_TIME','SPORADIC','PROSPECTIVE'].includes(k));
+  const types=Object.keys(qfActive).filter(k=>['Donor','Parent','Student','Prospective'].includes(k));
+  const hasAction=qfActive['has_action'];
+  const noAction=qfActive['no_action'];
+  const hasPledge=qfActive['has_pledge'];
+
+  const results=contactRows.map((r,i)=>{
+    const name=get(r,contactHdr,'name');
+    const cat=get(r,contactHdr,'giving category');
+    const category=get(r,contactHdr,'category');
+    const addr=get(r,contactHdr,'address');
+    const action=get(r,contactHdr,'action plan');
+    const futAmt=get(r,contactHdr,'future pledge amt');
+    const life=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+
+    if(cats.length&&!cats.some(c=>cat.toUpperCase().includes(c)))return null;
+    if(types.length&&!types.some(t=>category.includes(t)))return null;
+    if(hasAction&&!action.trim())return null;
+    if(noAction&&action.trim())return null;
+    if(hasPledge&&!futAmt.trim())return null;
+    if(text){const hay=[name,addr].join(' ').toLowerCase();if(!text.split(/\s+/).every(t=>hay.includes(t)))return null;}
+
+    const city=(addr||'').split(',').slice(1,3).join(',').trim();
+    return{i,name,cat,category,city,life:fmt$(life),action};
+  }).filter(Boolean);
+
+  const rDiv=document.getElementById('query-results');
+  const tbody=document.getElementById('query-tbody');
+  const countEl=document.getElementById('query-count');
+
+  if(!results.length&&!cats.length&&!types.length&&!hasAction&&!noAction&&!hasPledge&&!text){
+    rDiv.style.display='none';return;
+  }
+  countEl.textContent=`${results.length} contact${results.length!==1?'s':''} found`;
+  tbody.innerHTML=results.slice(0,200).map(h=>`
+    <tr onclick="openLedger(${h.i})">
+      <td style="font-weight:600">${h.name}</td>
+      <td><span class="hero-pill ${pillCls(h.cat)}" style="font-size:9px;padding:1px 6px">${h.cat?pillLabel(h.cat):'—'}</span></td>
+      <td>${h.category||'—'}</td>
+      <td>${h.city||'—'}</td>
+      <td style="color:var(--blue);font-weight:600">${h.life||'—'}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.action||'—'}</td>
+    </tr>`).join('');
+  rDiv.style.display='block';
+  if(results.length>200){countEl.textContent+=` (showing first 200)`;}
+}
+
+function clearQuery(){
+  qfActive={};
+  document.querySelectorAll('.filter-chip-toggle').forEach(el=>{el.classList.remove('on');const cb=el.querySelector('input');if(cb)cb.checked=false;});
+  document.getElementById('qf-text').value='';
+  document.getElementById('query-results').style.display='none';
 }
 
 // ─── ADD CONTACT ──────────────────────────────────────────────────────────────
-function clearAdd() {
-  ['ac-name','ac-phone','ac-email','ac-addr','ac-action','ac-date','ac-notes'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+function clearAdd(){
+  ['ac-name','ac-phone','ac-email','ac-addr','ac-action','ac-date','ac-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   hideMsg('ac-msg');
 }
 
-async function saveNewContact() {
-  const name = (document.getElementById('ac-name').value || '').trim();
-  if (!name) { showMsg('ac-msg', 'Name is required.', 'error'); return; }
-  const maxCol = Math.max(...Object.values(contactHdr).filter(v => typeof v === 'number'), 20);
-  const newRow = Array(maxCol + 1).fill('');
-  const setF = (field, val) => { const i = col(contactHdr, field); if (i >= 0) newRow[i] = val; };
-  setF('name', name);
-  setF('category', 'Prospective');
-  setF('phone', document.getElementById('ac-phone').value || '');
-  setF('email', document.getElementById('ac-email').value || '');
-  setF('address', document.getElementById('ac-addr').value || '');
-  setF('action plan', document.getElementById('ac-action').value || '');
-  setF('action date', document.getElementById('ac-date').value || '');
-  setF('notes', document.getElementById('ac-notes').value || '');
-  if (isDemo) {
-    contactRows.push(newRow); buildIndexes();
-    showMsg('ac-msg', '✓ Added (demo mode).', 'success');
-    setTimeout(clearAdd, 1500); return;
-  }
-  showMsg('ac-msg', 'Saving…', 'info');
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.CONTACTS)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-    const res = await authedFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [newRow] }) });
-    if (!res.ok) { const d = await res.json(); showMsg('ac-msg', 'Error: ' + (d?.error?.message || res.status), 'error'); return; }
-    contactRows.push(newRow); buildIndexes();
-    document.getElementById('topbar-badge').textContent = (signedInEmail || 'Live') + ' · ' + contactRows.length + ' contacts';
-    showMsg('ac-msg', '✓ Added to sheet as Prospective!', 'success');
-    setTimeout(clearAdd, 2000);
-  } catch (e) { showMsg('ac-msg', 'Network error: ' + e.message, 'error'); }
+async function saveNewContact(){
+  const name=(document.getElementById('ac-name').value||'').trim();
+  if(!name){showMsg('ac-msg','Name is required.','error');return;}
+  const maxCol=Math.max(...Object.values(contactHdr).filter(v=>typeof v==='number'),20);
+  const newRow=Array(maxCol+1).fill('');
+  const setF=(field,val)=>{const i=col(contactHdr,field);if(i>=0)newRow[i]=val;};
+  setF('name',name);setF('category','Prospective');
+  setF('phone',document.getElementById('ac-phone').value||'');
+  setF('email',document.getElementById('ac-email').value||'');
+  setF('address',document.getElementById('ac-addr').value||'');
+  setF('action plan',document.getElementById('ac-action').value||'');
+  setF('action date',document.getElementById('ac-date').value||'');
+  setF('notes',document.getElementById('ac-notes').value||'');
+  if(isDemo){contactRows.push(newRow);buildIndexes();showMsg('ac-msg','✓ Added (demo mode).','success');setTimeout(clearAdd,1500);return;}
+  showMsg('ac-msg','Saving…','info');
+  try{
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.CONTACTS)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    const res=await authedFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[newRow]})});
+    if(!res.ok){const d=await res.json();showMsg('ac-msg','Error: '+(d?.error?.message||res.status),'error');return;}
+    contactRows.push(newRow);buildIndexes();
+    document.getElementById('topbar-badge').textContent=(signedInEmail||'Live')+' · '+contactRows.length+' contacts';
+    showMsg('ac-msg','✓ Added to sheet as Prospective!','success');
+    setTimeout(clearAdd,2000);
+  }catch(e){showMsg('ac-msg','Network error: '+e.message,'error');}
 }
 
 // ─── SYNC TAB ─────────────────────────────────────────────────────────────────
-let syncParsed = [], syncNew = [], syncSelected = new Set();
-
-function syncDrop(e) { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) loadSyncFile(f); }
-function syncFileChosen(input) { if (input.files[0]) loadSyncFile(input.files[0]); }
-
-function loadSyncFile(file) {
-  const fn = document.getElementById('sync-fname');
-  fn.textContent = '📄 ' + file.name; fn.style.display = 'block';
-  const reader = new FileReader();
-  reader.onload = e => {
-    syncParsed = parseCSV(e.target.result);
-    showMsg('sync-msg', `✓ Loaded ${syncParsed.length} rows from ${file.name}`, 'success');
-  };
+let syncParsed=[],syncNew=[];
+function syncDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)loadSyncFile(f);}
+function syncFileChosen(input){if(input.files[0])loadSyncFile(input.files[0]);}
+function loadSyncFile(file){
+  const fn=document.getElementById('sync-fname');fn.textContent='📄 '+file.name;fn.style.display='block';
+  const reader=new FileReader();
+  reader.onload=e=>{syncParsed=parseCSV(e.target.result);showMsg('sync-msg',`✓ Loaded ${syncParsed.length} rows from ${file.name}`,'success');};
   reader.readAsText(file);
 }
-
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return [];
-  const hdrs = parseCSVLine(lines[0]);
-  return lines.slice(1).map(l => {
-    const vals = parseCSVLine(l);
-    const obj = {};
-    hdrs.forEach((h, i) => { obj[h.trim().replace(/^\uFEFF/, '')] = (vals[i] || '').trim(); });
-    return obj;
-  }).filter(r => r.PMT_ID || r.ACT_ID);
+function parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];
+  const hdrs=parseCSVLine(lines[0]);
+  return lines.slice(1).map(l=>{const vals=parseCSVLine(l);const obj={};hdrs.forEach((h,i)=>{obj[h.trim().replace(/^\uFEFF/,'')]=(vals[i]||'').trim();});return obj;}).filter(r=>r.PMT_ID||r.ACT_ID);
 }
-function parseCSVLine(line) {
-  const res = []; let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
-    else if (ch === ',' && !inQ) { res.push(cur); cur = ''; }
-    else cur += ch;
-  }
-  res.push(cur); return res;
+function parseCSVLine(line){
+  const res=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(ch===','&&!inQ){res.push(cur);cur='';}else cur+=ch;}
+  res.push(cur);return res;
 }
-
-async function runSync() {
-  if (!syncParsed.length) { showMsg('sync-msg', 'Please upload a CSV file first.', 'error'); return; }
-  if (isDemo) { processSyncResults(new Set(['12236', '18809'])); return; }
-  const tab = (document.getElementById('sync-tab').value || '').trim();
-  showMsg('sync-msg', 'Checking existing payments…', 'info');
-  const existing = new Set();
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}`;
-    const res = await authedFetch(url);
-    if (res.ok) { const d = await res.json(); (d.values || []).slice(1).forEach(r => { if (r[0]) existing.add(String(r[0]).trim()); }); }
-  } catch {}
+async function runSync(){
+  if(!syncParsed.length){showMsg('sync-msg','Please upload a CSV file first.','error');return;}
+  if(isDemo){processSyncResults(new Set(['12236','18809']));return;}
+  const tab=(document.getElementById('sync-tab').value||'').trim();
+  showMsg('sync-msg','Checking existing payments…','info');
+  const existing=new Set();
+  try{const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}`;const res=await authedFetch(url);if(res.ok){const d=await res.json();(d.values||[]).slice(1).forEach(r=>{if(r[0])existing.add(String(r[0]).trim());});}}catch{}
   processSyncResults(existing);
 }
-
-function processSyncResults(existing) {
-  const knownIds = new Set(contactRows.map(r => normId(get(r, contactHdr, 'accountid'))));
-  syncNew = []; const dupes = [], unknown = [];
-  syncParsed.forEach(row => {
-    const pid = String(row.PMT_ID || '').trim();
-    const aid = String(row.ACT_ID || '').trim();
-    if (existing.has(pid)) dupes.push(row);
-    else if (!knownIds.has(aid)) unknown.push(row);
-    else syncNew.push(row);
-  });
-  syncSelected = new Set(syncNew.map((_, i) => i));
-  const res = document.getElementById('sync-results');
-  res.style.display = 'block';
-  res.innerHTML = `
+function processSyncResults(existing){
+  const knownIds=new Set(contactRows.map(r=>normId(get(r,contactHdr,'accountid'))));
+  syncNew=[];const dupes=[],unknown=[];
+  syncParsed.forEach(row=>{const pid=String(row.PMT_ID||'').trim();const aid=String(row.ACT_ID||'').trim();if(existing.has(pid))dupes.push(row);else if(!knownIds.has(aid))unknown.push(row);else syncNew.push(row);});
+  const res=document.getElementById('sync-results');res.style.display='block';
+  res.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--green)">${syncNew.length}</div><div style="font-size:11px;color:var(--green)">New</div></div>
       <div style="background:var(--gray-200);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--gray-700)">${dupes.length}</div><div style="font-size:11px">Duplicate</div></div>
       <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--amber)">${unknown.length}</div><div style="font-size:11px;color:var(--amber)">Unknown</div></div>
     </div>
-    ${syncNew.length ? `
-    <div class="card">
-      <div class="section-head">🟢 New payments to add</div>
-      ${syncNew.map((row, i) => `
-        <label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200);cursor:pointer">
-          <input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" style="accent-color:var(--blue)" />
-          <div style="flex:1;font-size:12px">
-            <div style="font-weight:600">${row.SystemDisplay1 || row.ACT_ID}</div>
-            <div style="color:var(--gray-500)">${row.PMT_DateNoTime || row.Date || ''} · $${parseFloat(row.AppliedAmount || 0).toLocaleString()} ${row.CUR_Code || 'USD'} · ${row.AppliedTo || ''}</div>
-          </div>
-        </label>`).join('')}
-      <div class="btn-row" style="margin-top:10px">
-        <button class="btn btn-primary" onclick="syncApprove()">Add selected to sheet</button>
-      </div>
-      <div id="sync-write-msg" class="msg"></div>
-    </div>` : '<div class="card" style="font-size:13px;color:var(--gray-500)">No new payments found.</div>'}
-    ${unknown.length ? `<div class="card"><div class="section-head">🟡 Unknown contacts (${unknown.length})</div>${unknown.slice(0,10).map(r => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-200)"><b>${r.SystemDisplay1||r.ACT_ID}</b> · ${r.PMT_DateNoTime||''} · $${parseFloat(r.AppliedAmount||0).toLocaleString()}</div>`).join('')}${unknown.length>10?`<div style="font-size:11px;color:var(--gray-500);padding-top:6px">…and ${unknown.length-10} more</div>`:''}</div>` : ''}
-  `;
+    ${syncNew.length?`<div class="card"><div class="section-head">🟢 New payments to add</div>
+    ${syncNew.map((row,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200);cursor:pointer"><input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" style="accent-color:var(--blue)" /><div style="flex:1;font-size:12px"><div style="font-weight:600">${row.SystemDisplay1||row.ACT_ID}</div><div style="color:var(--gray-500)">${row.PMT_DateNoTime||row.Date||''} · $${parseFloat(row.AppliedAmount||0).toLocaleString()} ${row.CUR_Code||'USD'} · ${row.AppliedTo||''}</div></div></label>`).join('')}
+    <div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="syncApprove()">Add selected to sheet</button></div><div id="sync-write-msg" class="msg"></div></div>`:'<div class="card" style="font-size:13px;color:var(--gray-500)">No new payments found.</div>'}
+    ${unknown.length?`<div class="card"><div class="section-head">🟡 Unknown contacts (${unknown.length})</div>${unknown.slice(0,10).map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-200)"><b>${r.SystemDisplay1||r.ACT_ID}</b> · ${r.PMT_DateNoTime||''} · $${parseFloat(r.AppliedAmount||0).toLocaleString()}</div>`).join('')}${unknown.length>10?`<div style="font-size:11px;color:var(--gray-500);padding-top:6px">…and ${unknown.length-10} more</div>`:''}</div>`:''}`;
   hideMsg('sync-msg');
 }
-
-async function syncApprove() {
-  const toAdd = syncNew.filter(r => !r._skip);
-  if (!toAdd.length) { showMsg('sync-write-msg', 'Nothing selected.', 'error'); return; }
-  const tab = (document.getElementById('sync-tab').value || '').trim();
-  if (isDemo) { showMsg('sync-write-msg', `Demo: would add ${toAdd.length} payment(s) to "${tab}".`, 'info'); return; }
-  showMsg('sync-write-msg', `Adding ${toAdd.length} rows…`, 'info');
-  const newRows = toAdd.map(row => {
-    const amt = parseFloat(row.AppliedAmount || 0);
-    const rate = parseFloat(row.PMT_ExchangeRate || 1);
-    const usd = row.CUR_Code === 'USD' ? amt : (rate > 0 ? +(amt / rate).toFixed(2) : '');
-    return [row.PMT_ID, row.ACT_ID, row.PMT_DateNoTime || row.Date, amt, row.CUR_Code || 'USD', row.PMT_ExchangeRate || '', usd, row.Method || '', row.AppliedTo || '', row.LTT_Description || '', 'Admire Sync', row.PmtNotes || ''];
-  });
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-    const res = await authedFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: newRows }) });
-    if (!res.ok) { const d = await res.json(); showMsg('sync-write-msg', 'Error: ' + (d?.error?.message || res.status), 'error'); return; }
-    showMsg('sync-write-msg', `✓ Added ${toAdd.length} payment(s)!`, 'success');
-  } catch (e) { showMsg('sync-write-msg', 'Network error: ' + e.message, 'error'); }
+async function syncApprove(){
+  const toAdd=syncNew.filter(r=>!r._skip);if(!toAdd.length){showMsg('sync-write-msg','Nothing selected.','error');return;}
+  const tab=(document.getElementById('sync-tab').value||'').trim();
+  if(isDemo){showMsg('sync-write-msg',`Demo: would add ${toAdd.length} payment(s) to "${tab}".`,'info');return;}
+  showMsg('sync-write-msg',`Adding ${toAdd.length} rows…`,'info');
+  const newRows=toAdd.map(row=>{const amt=parseFloat(row.AppliedAmount||0);const rate=parseFloat(row.PMT_ExchangeRate||1);const usd=row.CUR_Code==='USD'?amt:(rate>0?+(amt/rate).toFixed(2):'');return[row.PMT_ID,row.ACT_ID,row.PMT_DateNoTime||row.Date,amt,row.CUR_Code||'USD',row.PMT_ExchangeRate||'',usd,row.Method||'',row.AppliedTo||'',row.LTT_Description||'','Admire Sync',row.PmtNotes||''];});
+  try{
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    const res=await authedFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:newRows})});
+    if(!res.ok){const d=await res.json();showMsg('sync-write-msg','Error: '+(d?.error?.message||res.status),'error');return;}
+    showMsg('sync-write-msg',`✓ Added ${toAdd.length} payment(s)!`,'success');
+  }catch(e){showMsg('sync-write-msg','Network error: '+e.message,'error');}
 }
+function clearSync(){syncParsed=[];syncNew=[];document.getElementById('sync-file').value='';document.getElementById('sync-fname').style.display='none';document.getElementById('sync-results').style.display='none';document.getElementById('sync-msg').style.display='none';}
 
-function clearSync() {
-  syncParsed = []; syncNew = []; syncSelected = new Set();
-  document.getElementById('sync-file').value = '';
-  document.getElementById('sync-fname').style.display = 'none';
-  document.getElementById('sync-results').style.display = 'none';
-  document.getElementById('sync-msg').style.display = 'none';
+
+// ─── QUERIES TAB ──────────────────────────────────────────────────────────────
+function runQuery() {
+  const catFilter = (document.getElementById('q-cat').value || '').toLowerCase();
+  const typeFilter = (document.getElementById('q-type').value || '').toLowerCase();
+  const stateFilter = (document.getElementById('q-state').value || '').toLowerCase().trim();
+  const actionFilter = document.getElementById('q-action').value;
+  const emailFilter = document.getElementById('q-email').value;
+  const dedFilter = document.getElementById('q-ded').value;
+  const textFilter = (document.getElementById('q-text').value || '').toLowerCase().trim();
+  const results = [];
+  contactRows.forEach((r, i) => {
+    const name = get(r, contactHdr, 'name');
+    const cat = (get(r, contactHdr, 'giving category') || '').toLowerCase();
+    const category = (get(r, contactHdr, 'category') || '').toLowerCase();
+    const addr = (get(r, contactHdr, 'address') || '').toLowerCase();
+    const email = get(r, contactHdr, 'email');
+    const action = get(r, contactHdr, 'action plan');
+    const acctId = normId(get(r, contactHdr, 'accountid'));
+    const lifetime = get(r, contactHdr, 'lifetime giving (if donor 4k+)');
+    if (catFilter && !cat.includes(catFilter)) return;
+    if (typeFilter && !category.includes(typeFilter)) return;
+    if (stateFilter) { const parts = addr.split(','); const sc = parts.slice(-2).join(' '); if (!sc.includes(stateFilter)) return; }
+    if (actionFilter === 'yes' && !action.trim()) return;
+    if (actionFilter === 'no' && action.trim()) return;
+    if (emailFilter === 'yes' && !email.trim()) return;
+    if (emailFilter === 'no' && email.trim()) return;
+    if (dedFilter === 'yes' && !(dedByAcct.get(acctId) || []).length) return;
+    if (dedFilter === 'no' && (dedByAcct.get(acctId) || []).length) return;
+    if (textFilter && ![name, addr, email, action].join(' ').toLowerCase().includes(textFilter)) return;
+    const addrParts = (get(r, contactHdr, 'address') || '').split(',');
+    const stateRaw = (addrParts[addrParts.length - 1] || '').trim().split(/\s+/)[0] || '';
+    results.push({ i, name, cat: get(r, contactHdr, 'giving category'), category: get(r, contactHdr, 'category'), state: stateRaw, lifetime, action });
+  });
+  const tbody = document.getElementById('q-tbody');
+  document.getElementById('q-count').textContent = results.length + ' contact' + (results.length === 1 ? '' : 's') + ' found';
+  tbody.innerHTML = results.slice(0, 200).map(({ i, name, cat, category, state, lifetime, action }) => `
+    <tr onclick="openLedger(${i})">
+      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</td>
+      <td style="font-size:11px;color:var(--gray-500)">${category || '—'}</td>
+      <td><span class="hero-pill ${pillCls(cat)}" style="font-size:10px;margin:0">${cat ? pillLabel(cat) : '—'}</span></td>
+      <td style="font-size:11px">${state || '—'}</td>
+      <td style="font-size:11px;color:var(--blue);font-weight:600">${lifetime ? fmt$(lifetime) : '—'}</td>
+      <td style="font-size:11px;color:var(--gray-700);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${action || '—'}</td>
+    </tr>`).join('');
+  if (results.length > 200) tbody.innerHTML += `<tr><td colspan="6" style="text-align:center;padding:10px;font-size:12px;color:var(--gray-500)">Showing first 200 of ${results.length} results.</td></tr>`;
+  document.getElementById('q-results').style.display = 'block';
+}
+function clearQuery() {
+  ['q-cat','q-type','q-action','q-email','q-ded'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['q-state','q-text'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('q-results').style.display = 'none';
 }
 
 // ─── DEMO MODE ────────────────────────────────────────────────────────────────
-function loadDemo() {
-  isDemo = true;
-  // Build minimal demo data matching the real schema
-  contactHdr = hdr(['AccountID','Name','Category','Address','Phone','Email','Lifetime Giving (if Donor 4k+)','Parent Of','Raw Association Tags','Data Source','Giving Category','Giving Pattern','Action Plan','Action Date','Notes','Future Pledge Yrs','Future Pledge Amt','Total Commitment','Faulty Phone or Address','Yahrtzeit For','Yahrtzeit']);
-  contactRows = [
+function loadDemo(){
+  isDemo=true;
+  contactHdr=hdr(['AccountID','Name','Category','Address','Phone','Email','Lifetime Giving (if Donor 4k+)','Parent Of','Raw Association Tags','Data Source','Giving Category','Giving Pattern','Action Plan','Action Date','Notes','Future Pledge Yrs','Future Pledge Amt','Total Commitment','Faulty Phone or Address','Yahrtzeit For','Yahrtzeit']);
+  contactRows=[
     ['9921','ADLER, Jonathan and Leah','Donor (4k+)','388 Maitland Avenue, Teaneck, NJ 07666','(917) 697-9369','leahadler1@yahoo.com','$46,500','','','Donor Master','ACTIVE_LOYAL','Gave 13 years','Call re: dedication','July 2026','Strong supporter. Interested in naming.','2027, 2028','$5,000','$51,500','','',''],
     ['8607','BERMAN, Ann','Donor (4k+)','3212 Northbrook Road, Baltimore, MD 21208','(410) 258-3630','savtaberman@gmail.com','$26,420','','','Donor Master','ACTIVE_CONSISTENT','Gave 15 years','','','','','0','$26,420','','',''],
     ['3243','BERMAN, Ben and Elizabeth','Donor (4k+); Student/Alumni','4333 North Jefferson Avenue, Miami Beach, FL 33140','(301) 512-4069','benberman@bermanenterprises.com','$169,264','','','Donor Master','ACTIVE_LOYAL','Gave 16 years','Get dedication text!','','and what else?','','0','$169,264','','',''],
   ];
-  donOvHdr = hdr(['AccountID','Name','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026','Lifetime Giving','First Gift Year','Last Gift Year','Years Given','Largest Gift','Largest Gift Year','Last Gift Amount','Giving Category','Giving Pattern','Future Pledge Yrs','Future Pledge Amt']);
-  donOvRows = [
+  donOvHdr=hdr(['AccountID','Name','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026','Lifetime Giving','First Gift Year','Last Gift Year','Years Given','Largest Gift','Largest Gift Year','Last Gift Amount','Giving Category','Giving Pattern','Future Pledge Yrs','Future Pledge Amt']);
+  donOvRows=[
     ['9921','ADLER, Jonathan and Leah',0,0,500,0,3500,0,1000,0,1000,0,0,2000,0,0,1000,0,1000,0,1000,1800,3600,10400,9700,0,10000,0,'46500','2004','2026','13','10400','2023','10000','ACTIVE_LOYAL','Gave 13 years','2027, 2028','5000'],
     ['8607','BERMAN, Ann',0,0,1000,750,3000,2500,2500,2500,0,1000,860,5000,5000,0,50,180,0,0,0,180,0,100,0,1800,0,0,'26420','2004','2025','15','5000','2013','1800','ACTIVE_CONSISTENT','Gave 15 years','','0'],
     ['3243','BERMAN, Ben and Elizabeth',0,0,0,0,0,10000,200,0,0,0,500,3000,6500,10600,0,10180,10000,10000,10000,24200,23600,19650,16667,4167,10000,0,'169264','2007','2026','16','24200','2021','10000','ACTIVE_LOYAL','Gave 16 years','','0'],
   ];
-  studentHdr = hdr(['AccountID','Name','ProgramHistory','MostRecentYear','MostRecentProgram','Status','MilitaryStatus','PostProgram','StaffRole','HousingTag','SOL_Rav','Parent_Name','Address','City','State','Phone1','Phone2','Email','Parent_AccountID','MatchConfidence','hesder','did idf through LLC','llc housing starting date','llc housing ending date']);
-  studentRows = [];
-  dedHdr = hdr(['Account ID','TODO','Donor Name','Total Commitment','Dedication Item','Notes','Status','Dedication Text','Notes2','Flags']);
-  dedRows = [
+  studentHdr=hdr(['AccountID','Name','ProgramHistory','MostRecentYear','MostRecentProgram','Status','MilitaryStatus','PostProgram','StaffRole','HousingTag','SOL_Rav','Parent_Name','Address','City','State','Phone1','Phone2','Email','Parent_AccountID','MatchConfidence','hesder','did idf through LLC','llc housing starting date','llc housing ending date']);
+  studentRows=[];
+  dedHdr=hdr(['Account ID','TODO','Donor Name','Total Commitment','Dedication Item','Notes','Status','Dedication Text','Notes2','Flags']);
+  dedRows=[
     ['9921','','ADLER, Jonathan and Leah','$46,500','Stone Wall','','Hung','In memory of Moshe ben Yosef z"l','',''],
     ['3243','','BERMAN, Ben and Elizabeth','$169,264','Administrative Office','Need to confirm text','Not Hung','','','NEEDS TEXT'],
   ];
-  relHdr = hdr(['RelationshipID','PersonA_AccountID','PersonA_Name','RelationshipType','PersonB_AccountID','PersonB_Name','Birthday','Anniversary']);
-  relRows = [
-    ['1','9921','ADLER, Jonathan and Leah','Wife of','','Leah Adler','','June 15, 2003'],
-  ];
-  tuiOvHdr = hdr(['AccountID','Name','(No Year) Tutoring','2023/24 Tuition','2024/25 Registration','2024/25 Tuition','Subtotal Tuition Paid','Total Tuittion Paid']);
-  tuiOvRows = [];
-  detailLoaded = true; donDetRows = []; tuiDetRows = [];
-  buildIndexes();
-  goLive();
+  relHdr=hdr(['RelationshipID','PersonA_AccountID','PersonA_Name','RelationshipType','PersonB_AccountID','PersonB_Name','Birthday','Anniversary']);
+  relRows=[['1','9921','ADLER, Jonathan and Leah','Wife of','8607','BERMAN, Ann','March 5, 1972','June 15, 2003']];
+  tuiOvHdr=hdr(['AccountID','Name','(No Year) Tutoring','2023/24 Tuition','2024/25 Registration','2024/25 Tuition','Subtotal Tuition Paid','Total Tuittion Paid']);
+  tuiOvRows=[];detailLoaded=true;donDetRows=[];tuiDetRows=[];
+  buildIndexes();goLive();
 }
 </script>
 </body>
