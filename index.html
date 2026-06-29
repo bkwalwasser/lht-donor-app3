@@ -145,6 +145,36 @@ select.form-input{cursor:pointer}
 .qresult-tbl td{padding:7px 8px;border-bottom:1px solid var(--gray-200);vertical-align:top}
 .qresult-tbl tr:hover td{background:var(--blue-light);cursor:pointer}
 .qcount{font-size:12px;color:var(--gray-500);margin:6px 0 10px;font-weight:500}
+
+/* ── Query & Batch UI ── */
+.q-section{margin-bottom:12px}
+.q-section-head{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 0;border-bottom:1px solid var(--gray-200)}
+.q-section-body{padding:6px 0}
+.q-section-body.collapsed{display:none}
+.cb-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.cb-chip{display:inline-flex;align-items:center;gap:5px;background:var(--gray-100);border:1px solid var(--gray-300);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;transition:all 0.12s;user-select:none}
+.cb-chip input{accent-color:var(--blue);width:13px;height:13px;cursor:pointer}
+.cb-chip.checked{background:var(--blue-light);border-color:var(--blue);color:var(--blue-mid);font-weight:500}
+.andor-toggle{display:flex;gap:4px;margin-bottom:6px}
+.andor-btn{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--gray-300);background:var(--gray-100);color:var(--gray-500);cursor:pointer}
+.andor-btn.active{background:var(--navy);color:white;border-color:var(--navy)}
+.sol-wrap{position:relative}
+.sol-dropdown{position:absolute;left:0;right:0;background:white;border:1px solid var(--gray-300);border-radius:var(--radius-sm);box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:300;max-height:200px;overflow-y:auto;margin-top:2px;display:none}
+.sol-option{padding:8px 12px;font-size:13px;cursor:pointer}
+.sol-option:hover{background:var(--blue-light)}
+.sol-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.sol-chip{display:inline-flex;align-items:center;gap:4px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue-mid);border-radius:20px;padding:3px 8px;font-size:11px;font-weight:500}
+.sol-chip button{background:none;border:none;cursor:pointer;color:var(--blue-mid);font-size:13px;line-height:1;padding:0}
+.range-row{display:flex;gap:6px;align-items:center;margin-top:4px}
+.range-row .form-input{flex:1}
+.range-row span{font-size:12px;color:var(--gray-500);white-space:nowrap}
+.q-run-bar{position:sticky;bottom:0;background:var(--white);border-top:1px solid var(--gray-200);padding:10px 0 0;margin-top:8px;display:flex;gap:8px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.batch-section{margin-bottom:10px}
+.batch-op-card{background:var(--gray-100);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;border:1px solid var(--gray-200)}
+.batch-op-title{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px}
+.result-item-sub{font-size:11px;color:var(--blue-mid);margin-top:2px;font-weight:500}
 </style>
 </head>
 <body>
@@ -161,6 +191,7 @@ select.form-input{cursor:pointer}
   <button class="nav-tab active" onclick="showTab('lookup')" id="tab-lookup">🔍 Lookup</button>
   <button class="nav-tab" onclick="showTab('query')" id="tab-query">🔎 Query</button>
   <button class="nav-tab" onclick="showTab('add')" id="tab-add">➕ Add</button>
+  <button class="nav-tab" onclick="showTab('batch')" id="tab-batch">✏️ Batch</button>
   <button class="nav-tab" onclick="showTab('sync')" id="tab-sync">🔄 Sync</button>
 </div>
 
@@ -324,27 +355,164 @@ select.form-input{cursor:pointer}
   <div id="tab-queries-content" style="display:none">
     <div class="card">
       <div class="section-head">🔎 Query Contacts</div>
-      <div class="qfilter-row">
-        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Giving Category</label>
-          <select class="form-input" id="q-cat"><option value="">Any</option><option>ACTIVE_LOYAL</option><option>ACTIVE_CONSISTENT</option><option>RECENTLY_LAPSED</option><option>LAPSED_REENGAGEABLE</option><option>LAPSED_LONG</option><option>ONE_TIME</option><option>SPORADIC</option><option>PROSPECTIVE</option></select></div>
-        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Contact Type</label>
-          <select class="form-input" id="q-type"><option value="">Any</option><option>Donor (4k+)</option><option>Student/Alumni</option><option>Parent</option><option>Prospective</option></select></div>
+
+      <!-- CONTACT TYPE -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qt')">Contact Type <span id="qt-arrow">▾</span></div>
+        <div class="q-section-body" id="qt-body">
+          <div class="andor-toggle">
+            <button class="andor-btn active" id="qt-and" onclick="setAndOr('qt','AND')">AND</button>
+            <button class="andor-btn" id="qt-or" onclick="setAndOr('qt','OR')">OR</button>
+            <span style="font-size:11px;color:var(--gray-500);align-self:center;margin-left:4px">How to combine types</span>
+          </div>
+          <div class="cb-group" id="qt-chips">
+            <label class="cb-chip"><input type="checkbox" value="donor" onchange="updateChip(this)"> Donor (4k+)</label>
+            <label class="cb-chip"><input type="checkbox" value="student" onchange="updateChip(this)"> Student/Alumni</label>
+            <label class="cb-chip"><input type="checkbox" value="parent" onchange="updateChip(this)"> Parent</label>
+            <label class="cb-chip"><input type="checkbox" value="prospective" onchange="updateChip(this)"> Prospective</label>
+            <label class="cb-chip"><input type="checkbox" value="school" onchange="updateChip(this)"> School</label>
+            <label class="cb-chip"><input type="checkbox" value="staff" onchange="updateChip(this)"> Staff</label>
+          </div>
+        </div>
       </div>
-      <div class="qfilter-row">
-        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">State / Country</label><input class="form-input" id="q-state" placeholder="e.g. NJ, NY, Israel" /></div>
-        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Has Action Plan</label><select class="form-input" id="q-action"><option value="">Either</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+
+      <!-- GIVING CATEGORY -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qc')">Giving Category <span id="qc-arrow">▾</span></div>
+        <div class="q-section-body" id="qc-body">
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" value="ACTIVE_LOYAL" onchange="updateChip(this)"> Active Loyal</label>
+            <label class="cb-chip"><input type="checkbox" value="ACTIVE_CONSISTENT" onchange="updateChip(this)"> Active Consistent</label>
+            <label class="cb-chip"><input type="checkbox" value="RECENTLY_LAPSED" onchange="updateChip(this)"> Recently Lapsed</label>
+            <label class="cb-chip"><input type="checkbox" value="LAPSED_REENGAGEABLE" onchange="updateChip(this)"> Lapsed Reengageable</label>
+            <label class="cb-chip"><input type="checkbox" value="LAPSED_LONG" onchange="updateChip(this)"> Lapsed Long</label>
+            <label class="cb-chip"><input type="checkbox" value="ONE_TIME" onchange="updateChip(this)"> One Time</label>
+            <label class="cb-chip"><input type="checkbox" value="SPORADIC" onchange="updateChip(this)"> Sporadic</label>
+            <label class="cb-chip"><input type="checkbox" value="PROSPECTIVE" onchange="updateChip(this)"> Prospective</label>
+          </div>
+        </div>
       </div>
-      <div class="qfilter-row">
-        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Has Email</label><select class="form-input" id="q-email"><option value="">Either</option><option value="yes">Yes</option><option value="no">No</option></select></div>
-        <div style="flex:1;min-width:140px"><label class="form-label" style="margin-top:0">Has Dedication</label><select class="form-input" id="q-ded"><option value="">Either</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+
+      <!-- SOLICITOR -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qs')">Solicitor <span id="qs-arrow">▾</span></div>
+        <div class="q-section-body" id="qs-body">
+          <div class="sol-wrap">
+            <input class="form-input" id="sol-search" placeholder="Type to search solicitors…" oninput="onSolSearch(this.value)" autocomplete="off" />
+            <div class="sol-dropdown" id="sol-dropdown"></div>
+          </div>
+          <div class="sol-chips" id="sol-chips"></div>
+        </div>
       </div>
-      <div class="qfilter-row"><div style="flex:2;min-width:200px"><label class="form-label" style="margin-top:0">Name / City search</label><input class="form-input" id="q-text" placeholder="Any text to match…" /></div></div>
-      <div class="btn-row" style="margin-top:4px"><button class="btn btn-primary" onclick="runQuery()">Run Query</button><button class="btn" onclick="clearQuery()">Clear</button></div>
+
+      <!-- LOCATION -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('ql')">Location (OR logic) <span id="ql-arrow">▾</span></div>
+        <div class="q-section-body" id="ql-body">
+          <label class="form-label" style="margin-top:0">Country</label>
+          <div class="cb-group" id="ql-countries"></div>
+          <label class="form-label">State / Province</label>
+          <div class="cb-group" id="ql-states"></div>
+        </div>
+      </div>
+
+      <!-- ACTION PLAN -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qa')">Action Plan <span id="qa-arrow">▾</span></div>
+        <div class="q-section-body" id="qa-body">
+          <div style="display:flex;gap:8px">
+            <select class="form-input" id="q-action-filter" style="flex:1">
+              <option value="">Either</option>
+              <option value="yes">Has action plan</option>
+              <option value="no">No action plan</option>
+            </select>
+            <input class="form-input" id="q-action-text" placeholder="Action plan contains…" style="flex:2" />
+          </div>
+        </div>
+      </div>
+
+      <!-- DEDICATION -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qd')">Dedication <span id="qd-arrow">▾</span></div>
+        <div class="q-section-body" id="qd-body">
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" id="qd-has" onchange="updateChip(this)"> Has dedication</label>
+            <label class="cb-chip"><input type="checkbox" id="qd-nothung" onchange="updateChip(this)"> Not yet hung</label>
+            <label class="cb-chip"><input type="checkbox" id="qd-notext" onchange="updateChip(this)"> Not hung + no text</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINANCE (collapsible) -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qf')">💰 Finance <span id="qf-arrow">▾</span></div>
+        <div class="q-section-body collapsed" id="qf-body">
+          <label class="form-label" style="margin-top:0">Total Commitment</label>
+          <div class="range-row">
+            <select class="form-input" id="qf-commit-op" style="flex:none;width:110px">
+              <option value="">Any</option>
+              <option value="gt">Above</option>
+              <option value="lt">Below</option>
+              <option value="between">Between</option>
+            </select>
+            <input class="form-input" id="qf-commit-a" placeholder="$" type="number" min="0" />
+            <span id="qf-commit-and" style="display:none">and</span>
+            <input class="form-input" id="qf-commit-b" placeholder="$" type="number" min="0" style="display:none" />
+          </div>
+          <label class="form-label">Given in past</label>
+          <div class="range-row">
+            <input class="form-input" id="qf-given-yrs" placeholder="# years" type="number" min="1" max="30" style="width:100px;flex:none" />
+            <span>years (based on last gift year)</span>
+          </div>
+          <label class="form-label">Pledge / Future commitment</label>
+          <select class="form-input" id="qf-pledge">
+            <option value="">Any</option>
+            <option value="yes">Has future pledge</option>
+            <option value="no">No future pledge</option>
+          </select>
+          <label class="form-label">Tuition outstanding</label>
+          <select class="form-input" id="qf-tui">
+            <option value="">Any</option>
+            <option value="yes">Has tuition balance</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL (collapsible) -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qe')">🎓 Educational <span id="qe-arrow">▾</span></div>
+        <div class="q-section-body collapsed" id="qe-body">
+          <label class="form-label" style="margin-top:0">Student years attended (includes parents)</label>
+          <div class="range-row">
+            <input class="form-input" id="qe-yr-from" placeholder="From year e.g. 2018" type="number" min="2000" max="2030" />
+            <span>to</span>
+            <input class="form-input" id="qe-yr-to" placeholder="To year e.g. 2024" type="number" min="2000" max="2030" />
+          </div>
+          <label class="form-label">Program contains</label>
+          <input class="form-input" id="qe-prog" placeholder="e.g. Hesder, LLC…" />
+        </div>
+      </div>
+
+      <!-- FREE TEXT -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qx')">Free Text Search <span id="qx-arrow">▾</span></div>
+        <div class="q-section-body" id="qx-body">
+          <input class="form-input" id="q-text" placeholder="Matches name, address, notes, email…" />
+        </div>
+      </div>
+
+      <div class="q-run-bar">
+        <button class="btn btn-primary" id="q-run-btn" onclick="runQuery()">Run Query</button>
+        <button class="btn" onclick="clearQuery()">Clear All</button>
+      </div>
     </div>
-    <div id="q-results" style="display:none">
+    <div id="q-results" style="display:none;margin-top:10px">
       <div class="qcount" id="q-count"></div>
       <div style="overflow-x:auto;background:white;border-radius:var(--radius);border:1px solid var(--gray-200)">
-        <table class="qresult-tbl"><thead><tr><th>Name</th><th>Type</th><th>Category</th><th>State</th><th>Lifetime</th><th>Action</th></tr></thead><tbody id="q-tbody"></tbody></table>
+        <table class="qresult-tbl">
+          <thead><tr><th>Name</th><th>Type</th><th>Category</th><th>State</th><th>Lifetime</th><th>Action</th></tr></thead>
+          <tbody id="q-tbody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -372,6 +540,120 @@ select.form-input{cursor:pointer}
         <button class="btn btn-primary" onclick="saveNewContact()">Add to sheet</button>
       </div>
       <div id="ac-msg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- BATCH EDIT TAB -->
+  <div id="tab-batch-content" style="display:none">
+    <div class="card">
+      <div class="section-head">✏️ Batch Edit</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Select an operation, paste or filter the target contacts, and apply changes in bulk.</p>
+
+      <label class="form-label" style="margin-top:0">Operation</label>
+      <select class="form-input" id="batch-op" onchange="onBatchOpChange()">
+        <option value="">— choose operation —</option>
+        <option value="ded-status">Dedication Status</option>
+        <option value="address">Address Update</option>
+        <option value="action">Action Plan / Action Date</option>
+        <option value="giving-cat">Giving Category</option>
+        <option value="solicitor">Solicitor Assignment</option>
+      </select>
+    </div>
+
+    <!-- DED STATUS -->
+    <div id="batch-ded-status" class="batch-op-card" style="display:none">
+      <div class="batch-op-title">🪨 Dedication Status Change</div>
+      <label class="form-label" style="margin-top:0">Filter dedications</label>
+      <select class="form-input" id="bds-filter">
+        <option value="all">All dedications</option>
+        <option value="not-hung">Not Hung only</option>
+        <option value="hung">Hung only</option>
+        <option value="no-text">Not Hung + no text</option>
+      </select>
+      <div id="bds-list" style="margin-top:10px;max-height:260px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius-sm)"></div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <label class="form-label" style="margin:0;white-space:nowrap">Set status to</label>
+        <select class="form-input" id="bds-new-status">
+          <option value="Hung">Hung</option>
+          <option value="Not Hung">Not Hung</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Ordered">Ordered</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadDedList()">Load</button>
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="applyDedStatus()">Apply to selected</button>
+      </div>
+      <div id="bds-msg" class="msg"></div>
+    </div>
+
+    <!-- ADDRESS UPDATE -->
+    <div id="batch-address" class="batch-op-card" style="display:none">
+      <div class="batch-op-title">📍 Address Update</div>
+      <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px">Paste rows with <b>AccountID,New Address</b> (one per line, comma-separated). The AccountID must match exactly.</p>
+      <textarea class="form-textarea" id="batch-addr-input" rows="8" placeholder="9921,388 Maitland Ave, Teaneck, NJ 07666&#10;8607,3212 Northbrook Rd, Baltimore, MD 21208"></textarea>
+      <div id="batch-addr-preview" style="margin-top:8px"></div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn" onclick="previewAddrBatch()">Preview</button>
+        <button class="btn btn-primary" onclick="applyAddrBatch()">Apply</button>
+      </div>
+      <div id="batch-addr-msg" class="msg"></div>
+    </div>
+
+    <!-- ACTION PLAN / DATE -->
+    <div id="batch-action" class="batch-op-card" style="display:none">
+      <div class="batch-op-title">📋 Action Plan / Date</div>
+      <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px">Paste AccountIDs (one per line), then set the new value.</p>
+      <textarea class="form-textarea" id="batch-action-ids" rows="5" placeholder="9921&#10;8607&#10;3243"></textarea>
+      <label class="form-label">New Action Plan</label>
+      <input class="form-input" id="batch-action-plan" placeholder="e.g. Call after Yomim Noraim" />
+      <label class="form-label">New Action Date</label>
+      <input class="form-input" id="batch-action-date" placeholder="e.g. October 2026" />
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="applyActionBatch()">Apply</button>
+      </div>
+      <div id="batch-action-msg" class="msg"></div>
+    </div>
+
+    <!-- GIVING CATEGORY -->
+    <div id="batch-giving-cat" class="batch-op-card" style="display:none">
+      <div class="batch-op-title">📊 Reclassify Giving Category</div>
+      <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px">Paste AccountIDs (one per line), then choose the new category.</p>
+      <textarea class="form-textarea" id="batch-cat-ids" rows="5" placeholder="9921&#10;8607&#10;3243"></textarea>
+      <label class="form-label">New Category</label>
+      <select class="form-input" id="batch-cat-val">
+        <option>ACTIVE_LOYAL</option><option>ACTIVE_CONSISTENT</option>
+        <option>RECENTLY_LAPSED</option><option>LAPSED_REENGAGEABLE</option>
+        <option>LAPSED_LONG</option><option>ONE_TIME</option>
+        <option>SPORADIC</option><option>PROSPECTIVE</option>
+      </select>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="applyCatBatch()">Apply</button>
+      </div>
+      <div id="batch-cat-msg" class="msg"></div>
+    </div>
+
+    <!-- SOLICITOR -->
+    <div id="batch-solicitor" class="batch-op-card" style="display:none">
+      <div class="batch-op-title">👤 Solicitor Assignment</div>
+      <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px">Paste AccountIDs (one per line), then set Solicitor 1 and/or Solicitor 2.</p>
+      <textarea class="form-textarea" id="batch-sol-ids" rows="5" placeholder="9921&#10;8607&#10;3243"></textarea>
+      <label class="form-label">Solicitor 1</label>
+      <div class="sol-wrap">
+        <input class="form-input" id="batch-sol1-input" placeholder="Type name…" oninput="onBatchSolSearch(this,'batch-sol1-drop','batch-sol1-val')" autocomplete="off" />
+        <input type="hidden" id="batch-sol1-val" />
+        <div class="sol-dropdown" id="batch-sol1-drop"></div>
+      </div>
+      <label class="form-label">Solicitor 2 (optional)</label>
+      <div class="sol-wrap">
+        <input class="form-input" id="batch-sol2-input" placeholder="Type name…" oninput="onBatchSolSearch(this,'batch-sol2-drop','batch-sol2-val')" autocomplete="off" />
+        <input type="hidden" id="batch-sol2-val" />
+        <div class="sol-dropdown" id="batch-sol2-drop"></div>
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="applySolBatch()">Apply</button>
+      </div>
+      <div id="batch-sol-msg" class="msg"></div>
     </div>
   </div>
 
@@ -597,7 +879,7 @@ function disconnect(){
   document.getElementById('main-nav').style.display='none';
   document.getElementById('topbar-badge').style.display='none';
   document.getElementById('persistent-search').style.display='none';
-  ['lookup','query','add','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
+  ['lookup','queries','add','batch','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
   document.getElementById('ledger-section').style.display='none';
   document.getElementById('msg').style.display='none';
 }
@@ -606,12 +888,13 @@ function disconnect(){
 let activeTab='lookup';
 function showTab(name){
   activeTab=name;
-  ['lookup','query','add','sync'].forEach(t=>{
+  ['lookup','queries','add','batch','sync'].forEach(t=>{
     const c=document.getElementById('tab-'+t+'-content');if(c)c.style.display=t===name?'block':'none';
     const b=document.getElementById('tab-'+t);if(b)b.classList.toggle('active',t===name);
   });
   document.getElementById('ledger-section').style.display='none';
-  document.getElementById('persistent-search').style.display='none';
+  const ps=document.getElementById('persistent-search');if(ps)ps.style.display='none';
+  if(name==='queries'&&contactRows.length) initLocationUI();
 }
 
 
@@ -692,7 +975,21 @@ function searchContacts(q){
     const cat=get(r,contactHdr,'giving category');
     const life=get(r,contactHdr,'lifetime giving (if donor 4k+)');
     const city=(addr||'').split(',').slice(1,3).join(',').trim();
-    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · ')});
+    // Student/army snippet
+    const acctIdS = normId(get(r,contactHdr,'accountid'));
+    const ownSIs = studentByAcct.get(acctIdS)||[];
+    const childSIs = studentByAcct.get('p:'+acctIdS)||[];
+    let studentSub='';
+    const allSIs=[...ownSIs,...childSIs];
+    if(allSIs.length){
+      const si=allSIs[0]; const sr=studentRows[si];
+      const prog=get(sr,studentHdr,'mostrecentprogram');
+      const yr=get(sr,studentHdr,'mostrecentyear');
+      const mil=get(sr,studentHdr,'militarystatus');
+      const parts=[prog&&yr?prog+' ('+yr+')':prog,mil].filter(Boolean);
+      if(parts.length) studentSub='🎓 '+parts.join(' · ');
+    }
+    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · '),studentSub});
   });
   return hits;
 }
@@ -732,7 +1029,7 @@ function openLedger(idx,fromSearch){
   currentAcctId=normId(get(contactRows[idx],contactHdr,'accountid'));
   emailCheckboxes={};
   renderLedger(idx);
-  ['lookup','query','add','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
+  ['lookup','queries','add','batch','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
   document.getElementById('ledger-section').style.display='block';
   document.getElementById('edit-panel').classList.remove('open');
   document.getElementById('email-panel').classList.remove('open');
@@ -1184,6 +1481,371 @@ function clearQuery(){
   document.getElementById('query-results').style.display='none';
 }
 
+// ─── QUERIES TAB ──────────────────────────────────────────────────────────────
+
+// Q-section collapse toggle
+function toggleQSection(id){
+  const body=document.getElementById(id+'-body');
+  const arrow=document.getElementById(id+'-arrow');
+  if(!body)return;
+  body.classList.toggle('collapsed');
+  if(arrow) arrow.textContent=body.classList.contains('collapsed')?'▸':'▾';
+}
+
+// Chip checked styling
+function updateChip(cb){ cb.closest('.cb-chip').classList.toggle('checked',cb.checked); }
+
+// AND/OR toggle for contact type
+let qtMode='AND';
+function setAndOr(id,mode){
+  qtMode=mode;
+  document.getElementById('qt-and').classList.toggle('active',mode==='AND');
+  document.getElementById('qt-or').classList.toggle('active',mode==='OR');
+}
+
+// Commit range toggle
+document.addEventListener('change',function(e){
+  if(e.target.id==='qf-commit-op'){
+    const v=e.target.value;
+    document.getElementById('qf-commit-and').style.display=v==='between'?'inline':'none';
+    document.getElementById('qf-commit-b').style.display=v==='between'?'block':'none';
+  }
+});
+
+// Solicitor typeahead (queries)
+let selectedSolicitors=new Set();
+function buildSolList(){
+  const sols=new Set();
+  contactRows.forEach(r=>{
+    const s1=(get(r,contactHdr,'solicitor 1')||'').trim();
+    const s2=(get(r,contactHdr,'solicitor 2')||'').trim();
+    if(s1)sols.add(s1); if(s2)sols.add(s2);
+  });
+  return [...sols].sort();
+}
+function onSolSearch(q){
+  const drop=document.getElementById('sol-dropdown');
+  if(!q.trim()){drop.style.display='none';return;}
+  const all=buildSolList().filter(s=>s.toLowerCase().includes(q.toLowerCase())).slice(0,15);
+  if(!all.length){drop.style.display='none';return;}
+  drop.innerHTML=all.map(s=>`<div class="sol-option" onclick="selectSolicitor('${s.replace(/'/g,"\'")}')"> ${s}</div>`).join('');
+  drop.style.display='block';
+}
+function selectSolicitor(name){
+  selectedSolicitors.add(name);
+  document.getElementById('sol-search').value='';
+  document.getElementById('sol-dropdown').style.display='none';
+  renderSolChips();
+}
+function removeSolicitor(name){
+  selectedSolicitors.delete(name);
+  renderSolChips();
+}
+function renderSolChips(){
+  document.getElementById('sol-chips').innerHTML=[...selectedSolicitors].map(s=>
+    `<span class="sol-chip">${s}<button onclick="removeSolicitor('${s.replace(/'/g,"\'")}')">×</button></span>`
+  ).join('');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.sol-wrap')){
+    const d=document.getElementById('sol-dropdown');if(d)d.style.display='none';
+  }
+});
+
+// Build location options from data
+function buildLocationOptions(){
+  const countries=new Map(); // country -> Set of states
+  const ISRAEL_KEYWORDS=['israel','tel aviv','jerusalem','haifa','rishon','petah','netanya','raanana','modin','beit-shemesh','efrat','gush','ramat'];
+  const CANADA_KEYWORDS=['ontario','quebec','british columbia','alberta','toronto','montreal','vancouver','ottawa',' on ',' qc ',' bc ',' ab '];
+  const UK_KEYWORDS=['united kingdom','england','london','manchester',' uk '];
+  contactRows.forEach(r=>{
+    const addr=(get(r,contactHdr,'address')||'').toLowerCase();
+    if(!addr.trim())return;
+    let country='USA'; let state='';
+    if(ISRAEL_KEYWORDS.some(k=>addr.includes(k))){ country='Israel'; state=''; }
+    else if(CANADA_KEYWORDS.some(k=>addr.includes(k))){ country='Canada';
+      const m=addr.match(/,\s*([a-z]{2})\s*(?:\d|$)/i); state=m?m[1].toUpperCase():''; }
+    else if(UK_KEYWORDS.some(k=>addr.includes(k))){ country='UK'; state=''; }
+    else {
+      // Parse US state from address like "City, ST ZIPCODE" or "City, ST"
+      const parts=get(r,contactHdr,'address').split(',');
+      if(parts.length>=2){
+        const last=parts[parts.length-1].trim();
+        const second=parts[parts.length-2].trim();
+        // last part might be "NJ 07666" or just "NJ"
+        const stM=last.match(/^([A-Z]{2})/) || second.match(/^([A-Z]{2})/);
+        if(stM) state=stM[1];
+        else {
+          // try last word of second-to-last segment
+          const w=second.split(/\s+/);
+          const wl=w[w.length-1];
+          if(/^[A-Z]{2}$/.test(wl)) state=wl;
+        }
+      }
+    }
+    if(!countries.has(country)) countries.set(country,new Set());
+    if(state) countries.get(country).add(state);
+  });
+  return countries;
+}
+
+let locationMap=null;
+let selectedCountries=new Set();
+let selectedStates=new Set();
+
+function initLocationUI(){
+  if(!locationMap) locationMap=buildLocationOptions();
+  const cDiv=document.getElementById('ql-countries');
+  const allCountries=[...locationMap.keys()].sort();
+  cDiv.innerHTML=allCountries.map(c=>`
+    <label class="cb-chip" id="lc-${c.replace(/\s/g,'_')}">
+      <input type="checkbox" value="${c}" onchange="onCountryChange(this)"> ${c}
+    </label>`).join('');
+  renderStateOptions();
+}
+
+function onCountryChange(cb){
+  cb.closest('.cb-chip').classList.toggle('checked',cb.checked);
+  if(cb.checked) selectedCountries.add(cb.value);
+  else { selectedCountries.delete(cb.value); }
+  renderStateOptions();
+}
+
+function renderStateOptions(){
+  const sDiv=document.getElementById('ql-states');
+  const states=new Set();
+  if(selectedCountries.size===0){
+    // show all states
+    locationMap.forEach((stSet)=>stSet.forEach(s=>states.add(s)));
+  } else {
+    selectedCountries.forEach(c=>{ (locationMap.get(c)||new Set()).forEach(s=>states.add(s)); });
+  }
+  const sorted=[...states].sort();
+  sDiv.innerHTML=sorted.length?sorted.map(s=>`
+    <label class="cb-chip">
+      <input type="checkbox" value="${s}" onchange="onStateChange(this)" ${selectedStates.has(s)?'checked':''}>
+      ${s}
+    </label>`).join(''):'<span style="font-size:12px;color:var(--gray-500)">Select a country to see states</span>';
+  // re-apply checked styling
+  sDiv.querySelectorAll('.cb-chip').forEach(chip=>{
+    const cb=chip.querySelector('input');
+    if(cb&&cb.checked) chip.classList.add('checked');
+  });
+}
+
+function onStateChange(cb){
+  cb.closest('.cb-chip').classList.toggle('checked',cb.checked);
+  if(cb.checked) selectedStates.add(cb.value);
+  else selectedStates.delete(cb.value);
+}
+
+// MAIN QUERY RUNNER
+function runQuery(){
+  const btn=document.getElementById('q-run-btn');
+  btn.innerHTML='<span class="spin"></span>Running…';btn.disabled=true;
+  setTimeout(()=>{
+    try{ _doRunQuery(); }finally{ btn.innerHTML='Run Query';btn.disabled=false; }
+  },30);
+}
+
+function _doRunQuery(){
+  // Gather filters
+  const selTypes=[...document.querySelectorAll('#qt-chips input:checked')].map(cb=>cb.value);
+  const selCats=[...document.querySelectorAll('#qc-body input:checked')].map(cb=>cb.value);
+  const actionFilter=document.getElementById('q-action-filter').value;
+  const actionText=(document.getElementById('q-action-text').value||'').toLowerCase().trim();
+  const qText=(document.getElementById('q-text').value||'').toLowerCase().trim();
+  const dedHas=document.getElementById('qd-has')?.checked;
+  const dedNotHung=document.getElementById('qd-nothung')?.checked;
+  const dedNoText=document.getElementById('qd-notext')?.checked;
+  const commitOp=document.getElementById('qf-commit-op').value;
+  const commitA=parseFloat(document.getElementById('qf-commit-a').value)||0;
+  const commitB=parseFloat(document.getElementById('qf-commit-b').value)||0;
+  const givenYrs=parseInt(document.getElementById('qf-given-yrs').value)||0;
+  const pledgeFilter=document.getElementById('qf-pledge').value;
+  const tuiFilter=document.getElementById('qf-tui').value;
+  const yrFrom=parseInt(document.getElementById('qe-yr-from').value)||0;
+  const yrTo=parseInt(document.getElementById('qe-yr-to').value)||0;
+  const progText=(document.getElementById('qe-prog').value||'').toLowerCase().trim();
+  const curYear=new Date().getFullYear();
+
+  const results=[];
+  contactRows.forEach((r,i)=>{
+    const name=get(r,contactHdr,'name');
+    const category=(get(r,contactHdr,'category')||'').toLowerCase();
+    const cat=get(r,contactHdr,'giving category');
+    const addr=get(r,contactHdr,'address')||'';
+    const addrL=addr.toLowerCase();
+    const email=get(r,contactHdr,'email');
+    const action=get(r,contactHdr,'action plan');
+    const notes=get(r,contactHdr,'notes');
+    const acctId=normId(get(r,contactHdr,'accountid'));
+    const sol1=(get(r,contactHdr,'solicitor 1')||'').trim();
+    const sol2=(get(r,contactHdr,'solicitor 2')||'').trim();
+    const lifetime=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+
+    // Contact type filter (AND or OR)
+    if(selTypes.length){
+      const typeMatches=selTypes.map(t=>{
+        if(t==='donor') return category.includes('donor');
+        if(t==='student') return category.includes('student');
+        if(t==='parent') return category.includes('parent');
+        if(t==='prospective') return category.includes('prospective');
+        if(t==='school') return category.includes('school');
+        if(t==='staff') return category.includes('staff');
+        return false;
+      });
+      const pass=qtMode==='AND'?typeMatches.every(Boolean):typeMatches.some(Boolean);
+      if(!pass) return;
+    }
+
+    // Giving category
+    if(selCats.length && !selCats.includes(cat)) return;
+
+    // Solicitor
+    if(selectedSolicitors.size){
+      const hasSol=[...selectedSolicitors].some(s=>sol1===s||sol2===s);
+      if(!hasSol) return;
+    }
+
+    // Location (OR logic)
+    if(selectedCountries.size||selectedStates.size){
+      const ISRAEL_KEYWORDS=['israel','tel aviv','jerusalem','haifa','rishon','netanya','raanana','efrat','gush'];
+      const CANADA_KEYWORDS=['ontario','quebec','british columbia','alberta','toronto','montreal','vancouver',' on ',' qc ',' bc '];
+      const UK_KEYWORDS=['united kingdom','england','london','manchester'];
+      let country='USA';
+      if(ISRAEL_KEYWORDS.some(k=>addrL.includes(k))) country='Israel';
+      else if(CANADA_KEYWORDS.some(k=>addrL.includes(k))) country='Canada';
+      else if(UK_KEYWORDS.some(k=>addrL.includes(k))) country='UK';
+      // state
+      let state='';
+      const parts=addr.split(',');
+      if(parts.length>=2){
+        const last=parts[parts.length-1].trim();
+        const second=parts[parts.length-2].trim();
+        const stM=last.match(/^([A-Z]{2})/)||second.match(/^([A-Z]{2})/);
+        if(stM) state=stM[1];
+        else { const w=second.split(/\s+/);const wl=w[w.length-1];if(/^[A-Z]{2}$/.test(wl))state=wl; }
+      }
+      const countryOk=selectedCountries.size===0||selectedCountries.has(country);
+      const stateOk=selectedStates.size===0||selectedStates.has(state);
+      // OR: must match country group OR state group
+      if(selectedCountries.size&&selectedStates.size){
+        if(!countryOk&&!stateOk) return;
+      } else if(selectedCountries.size){ if(!countryOk) return; }
+      else if(selectedStates.size){ if(!stateOk) return; }
+    }
+
+    // Action plan
+    if(actionFilter==='yes'&&!action.trim()) return;
+    if(actionFilter==='no'&&action.trim()) return;
+    if(actionText&&!action.toLowerCase().includes(actionText)) return;
+
+    // Dedication filters
+    const dedIdxArr=dedByAcct.get(acctId)||[];
+    if(dedHas&&!dedIdxArr.length) return;
+    if(dedNotHung){
+      const hasNH=dedIdxArr.some(di=>(get(dedRows[di],dedHdr,'status')||'').toLowerCase().includes('not hung'));
+      if(!hasNH) return;
+    }
+    if(dedNoText){
+      const hasNHNT=dedIdxArr.some(di=>{
+        const st=(get(dedRows[di],dedHdr,'status')||'').toLowerCase();
+        const txt=(get(dedRows[di],dedHdr,'dedication text')||'').trim();
+        return st.includes('not hung')&&!txt;
+      });
+      if(!hasNHNT) return;
+    }
+
+    // Finance
+    const doIdx=donOvByAcct.get(acctId);
+    const doRow=doIdx!==undefined?donOvRows[doIdx]:null;
+    if(commitOp){
+      const tc=parseFloat((get(r,contactHdr,'total commitment')||'0').replace(/[$,]/g,''))||
+               parseFloat((doRow?get(doRow,donOvHdr,'total commitment'):0)||0);
+      if(commitOp==='gt'&&tc<=commitA) return;
+      if(commitOp==='lt'&&tc>=commitA) return;
+      if(commitOp==='between'&&(tc<commitA||tc>commitB)) return;
+    }
+    if(givenYrs&&doRow){
+      const lastYr=parseInt(get(doRow,donOvHdr,'last gift year'))||0;
+      if(curYear-lastYr>givenYrs) return;
+    }
+    if(pledgeFilter==='yes'){
+      const fp=parseFloat((get(r,contactHdr,'future pledge amt')||'0').replace(/[$,]/g,''))||
+               parseFloat((doRow?get(doRow,donOvHdr,'future pledge amt'):0)||0);
+      if(fp<=0) return;
+    }
+    if(pledgeFilter==='no'){
+      const fp=parseFloat((get(r,contactHdr,'future pledge amt')||'0').replace(/[$,]/g,''))||0;
+      if(fp>0) return;
+    }
+    if(tuiFilter==='yes'){
+      const tuiIdx2=tuiOvByAcct.get(acctId);
+      if(tuiIdx2===undefined) return;
+      // check if tuition total > 0 (has balance — we use total as proxy)
+    }
+
+    // Educational
+    if(yrFrom||yrTo||progText){
+      const ownSIs=studentByAcct.get(acctId)||[];
+      const childSIs=studentByAcct.get('p:'+acctId)||[];
+      const allSIs=[...ownSIs,...childSIs];
+      if(!allSIs.length) return;
+      const passEd=allSIs.some(si=>{
+        const sr=studentRows[si];
+        const yr=parseInt(get(sr,studentHdr,'mostrecentyear'))||0;
+        const prog=(get(sr,studentHdr,'programhistory')||'').toLowerCase();
+        const rprog=(get(sr,studentHdr,'mostrecentprogram')||'').toLowerCase();
+        let ok=true;
+        if(yrFrom&&yr<yrFrom) ok=false;
+        if(yrTo&&yr>yrTo) ok=false;
+        if(progText&&!prog.includes(progText)&&!rprog.includes(progText)) ok=false;
+        return ok;
+      });
+      if(!passEd) return;
+    }
+
+    // Free text
+    if(qText&&![name,addrL,email,action,notes,sol1,sol2].join(' ').toLowerCase().includes(qText)) return;
+
+    // Extract state for display
+    const addrParts=addr.split(',');
+    const stateRaw=(addrParts[addrParts.length-1]||'').trim().split(/\s+/)[0]||'';
+
+    results.push({i,name,cat,category:get(r,contactHdr,'category'),state:stateRaw,lifetime,action});
+  });
+
+  const tbody=document.getElementById('q-tbody');
+  document.getElementById('q-count').textContent=results.length+' contact'+(results.length===1?'':'s')+' found';
+  tbody.innerHTML=results.slice(0,200).map(({i,name,cat,category,state,lifetime,action})=>`
+    <tr onclick="openLedger(${i})">
+      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</td>
+      <td style="font-size:11px;color:var(--gray-500)">${category||'—'}</td>
+      <td><span class="hero-pill ${pillCls(cat)}" style="font-size:10px;margin:0">${cat?pillLabel(cat):'—'}</span></td>
+      <td style="font-size:11px">${state||'—'}</td>
+      <td style="font-size:11px;color:var(--blue);font-weight:600">${lifetime?fmt$(lifetime):'—'}</td>
+      <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${action||'—'}</td>
+    </tr>`).join('');
+  if(results.length>200) tbody.innerHTML+=`<tr><td colspan="6" style="text-align:center;padding:10px;font-size:12px;color:var(--gray-500)">Showing first 200 of ${results.length}. Refine filters to narrow down.</td></tr>`;
+  document.getElementById('q-results').style.display='block';
+}
+
+function clearQuery(){
+  // Uncheck all chips
+  document.querySelectorAll('#tab-queries-content input[type=checkbox]').forEach(cb=>{
+    cb.checked=false; cb.closest('.cb-chip')?.classList.remove('checked');
+  });
+  // Reset selects & inputs
+  ['q-action-filter','qf-commit-op','qf-pledge','qf-tui'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['q-action-text','q-text','qf-commit-a','qf-commit-b','qf-given-yrs','qe-yr-from','qe-yr-to','qe-prog','sol-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  selectedSolicitors.clear(); renderSolChips();
+  selectedCountries.clear(); selectedStates.clear();
+  if(locationMap) renderStateOptions();
+  document.getElementById('q-results').style.display='none';
+  document.getElementById('q-count').textContent='';
+}
+
 // ─── ADD CONTACT ──────────────────────────────────────────────────────────────
 function clearAdd(){
   ['ac-name','ac-phone','ac-email','ac-addr','ac-action','ac-date','ac-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -1278,57 +1940,220 @@ async function syncApprove(){
 function clearSync(){syncParsed=[];syncNew=[];document.getElementById('sync-file').value='';document.getElementById('sync-fname').style.display='none';document.getElementById('sync-results').style.display='none';document.getElementById('sync-msg').style.display='none';}
 
 
-// ─── QUERIES TAB ──────────────────────────────────────────────────────────────
-function runQuery() {
-  const catFilter = (document.getElementById('q-cat').value || '').toLowerCase();
-  const typeFilter = (document.getElementById('q-type').value || '').toLowerCase();
-  const stateFilter = (document.getElementById('q-state').value || '').toLowerCase().trim();
-  const actionFilter = document.getElementById('q-action').value;
-  const emailFilter = document.getElementById('q-email').value;
-  const dedFilter = document.getElementById('q-ded').value;
-  const textFilter = (document.getElementById('q-text').value || '').toLowerCase().trim();
-  const results = [];
-  contactRows.forEach((r, i) => {
-    const name = get(r, contactHdr, 'name');
-    const cat = (get(r, contactHdr, 'giving category') || '').toLowerCase();
-    const category = (get(r, contactHdr, 'category') || '').toLowerCase();
-    const addr = (get(r, contactHdr, 'address') || '').toLowerCase();
-    const email = get(r, contactHdr, 'email');
-    const action = get(r, contactHdr, 'action plan');
-    const acctId = normId(get(r, contactHdr, 'accountid'));
-    const lifetime = get(r, contactHdr, 'lifetime giving (if donor 4k+)');
-    if (catFilter && !cat.includes(catFilter)) return;
-    if (typeFilter && !category.includes(typeFilter)) return;
-    if (stateFilter) { const parts = addr.split(','); const sc = parts.slice(-2).join(' '); if (!sc.includes(stateFilter)) return; }
-    if (actionFilter === 'yes' && !action.trim()) return;
-    if (actionFilter === 'no' && action.trim()) return;
-    if (emailFilter === 'yes' && !email.trim()) return;
-    if (emailFilter === 'no' && email.trim()) return;
-    if (dedFilter === 'yes' && !(dedByAcct.get(acctId) || []).length) return;
-    if (dedFilter === 'no' && (dedByAcct.get(acctId) || []).length) return;
-    if (textFilter && ![name, addr, email, action].join(' ').toLowerCase().includes(textFilter)) return;
-    const addrParts = (get(r, contactHdr, 'address') || '').split(',');
-    const stateRaw = (addrParts[addrParts.length - 1] || '').trim().split(/\s+/)[0] || '';
-    results.push({ i, name, cat: get(r, contactHdr, 'giving category'), category: get(r, contactHdr, 'category'), state: stateRaw, lifetime, action });
-  });
-  const tbody = document.getElementById('q-tbody');
-  document.getElementById('q-count').textContent = results.length + ' contact' + (results.length === 1 ? '' : 's') + ' found';
-  tbody.innerHTML = results.slice(0, 200).map(({ i, name, cat, category, state, lifetime, action }) => `
-    <tr onclick="openLedger(${i})">
-      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</td>
-      <td style="font-size:11px;color:var(--gray-500)">${category || '—'}</td>
-      <td><span class="hero-pill ${pillCls(cat)}" style="font-size:10px;margin:0">${cat ? pillLabel(cat) : '—'}</span></td>
-      <td style="font-size:11px">${state || '—'}</td>
-      <td style="font-size:11px;color:var(--blue);font-weight:600">${lifetime ? fmt$(lifetime) : '—'}</td>
-      <td style="font-size:11px;color:var(--gray-700);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${action || '—'}</td>
-    </tr>`).join('');
-  if (results.length > 200) tbody.innerHTML += `<tr><td colspan="6" style="text-align:center;padding:10px;font-size:12px;color:var(--gray-500)">Showing first 200 of ${results.length} results.</td></tr>`;
-  document.getElementById('q-results').style.display = 'block';
+// ─── BATCH EDIT ───────────────────────────────────────────────────────────────
+
+function onBatchOpChange(){
+  const op=document.getElementById('batch-op').value;
+  const ops=['ded-status','address','action','giving-cat','solicitor'];
+  ops.forEach(o=>{ const el=document.getElementById('batch-'+o); if(el) el.style.display=o===op?'block':'none'; });
+  if(op==='ded-status') loadDedList();
 }
-function clearQuery() {
-  ['q-cat','q-type','q-action','q-email','q-ded'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  ['q-state','q-text'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('q-results').style.display = 'none';
+
+// ── Dedication Status ──────────────────────────────────────────────────────
+function loadDedList(){
+  const filterVal=document.getElementById('bds-filter').value;
+  const list=document.getElementById('bds-list');
+  const rows=[];
+  dedRows.forEach((dr,di)=>{
+    const status=(get(dr,dedHdr,'status')||'').trim();
+    const text=(get(dr,dedHdr,'dedication text')||'').trim();
+    const item=get(dr,dedHdr,'dedication item');
+    const acctId=normId(get(dr,dedHdr,'account id'));
+    const ci=contactByAcct.get(acctId);
+    const name=ci!==undefined?get(contactRows[ci],contactHdr,'name'):(get(dr,dedHdr,'donor name')||acctId);
+    const statusL=status.toLowerCase();
+    if(filterVal==='not-hung'&&!statusL.includes('not hung')) return;
+    if(filterVal==='hung'&&!statusL.includes('hung')) return;  // includes "not hung" so refine:
+    if(filterVal==='hung'&&statusL.includes('not')) return;
+    if(filterVal==='no-text'&&!(statusL.includes('not hung')&&!text)) return;
+    rows.push({di,acctId,name,item,status,text});
+  });
+  list.innerHTML=rows.length?rows.map(({di,name,item,status})=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--gray-200);cursor:pointer;font-size:12px">
+      <input type="checkbox" data-di="${di}" checked style="accent-color:var(--blue)" />
+      <div style="flex:1"><b>${name}</b> · ${item||'?'} · <span style="color:var(--gray-500)">${status}</span></div>
+    </label>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--gray-500)">No dedications match this filter.</div>';
+}
+
+async function applyDedStatus(){
+  if(isDemo){showMsg('bds-msg','Demo mode — no changes written.','info');return;}
+  const newStatus=document.getElementById('bds-new-status').value;
+  const checked=[...document.querySelectorAll('#bds-list input[type=checkbox]:checked')];
+  if(!checked.length){showMsg('bds-msg','Nothing selected.','error');return;}
+  showMsg('bds-msg',`Updating ${checked.length} dedication(s)…`,'info');
+  // Find Status column in Dedications tab
+  const statusCol=col(dedHdr,'status');
+  if(statusCol<0){showMsg('bds-msg','Status column not found in Dedications tab.','error');return;}
+  let ok=0,fail=0;
+  for(const cb of checked){
+    const di=parseInt(cb.dataset.di);
+    const sheetRow=di+2; // header row 1, data from row 2
+    const range=`${encodeURIComponent(TAB.DEDICATIONS)}!${colToLetter(statusCol)}${sheetRow}`;
+    try{
+      const res=await authedFetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+        {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newStatus]]})}
+      );
+      if(res.ok){dedRows[di][statusCol]=newStatus;ok++;}else fail++;
+    }catch{fail++;}
+  }
+  showMsg('bds-msg',`✓ Updated ${ok} dedication(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
+  loadDedList();
+}
+
+// ── Address Batch ──────────────────────────────────────────────────────────
+let addrBatchParsed=[];
+function previewAddrBatch(){
+  const raw=(document.getElementById('batch-addr-input').value||'').trim();
+  addrBatchParsed=[];
+  const lines=raw.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  lines.forEach(line=>{
+    const comma=line.indexOf(',');
+    if(comma<0) return;
+    const acctId=normId(line.slice(0,comma).trim());
+    const newAddr=line.slice(comma+1).trim();
+    if(!acctId||!newAddr) return;
+    const ci=contactByAcct.get(acctId);
+    const name=ci!==undefined?get(contactRows[ci],contactHdr,'name'):'(not found)';
+    addrBatchParsed.push({acctId,newAddr,ci,name});
+  });
+  const found=addrBatchParsed.filter(x=>x.ci!==undefined);
+  const notFound=addrBatchParsed.filter(x=>x.ci===undefined);
+  document.getElementById('batch-addr-preview').innerHTML=`
+    <div style="font-size:12px;margin-bottom:6px"><b>${found.length}</b> matched · <b style="color:#A32D2D">${notFound.length}</b> not found</div>
+    ${found.slice(0,10).map(x=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--gray-200)"><b>${x.name}</b> → ${x.newAddr}</div>`).join('')}
+    ${found.length>10?`<div style="font-size:11px;color:var(--gray-500)">…and ${found.length-10} more</div>`:''}
+    ${notFound.length?`<div style="font-size:11px;color:#A32D2D;margin-top:4px">Not found: ${notFound.map(x=>x.acctId).join(', ')}</div>`:''}`;
+}
+
+async function applyAddrBatch(){
+  if(!addrBatchParsed.length){previewAddrBatch();}
+  const toApply=addrBatchParsed.filter(x=>x.ci!==undefined);
+  if(!toApply.length){showMsg('batch-addr-msg','No matching contacts found.','error');return;}
+  if(isDemo){
+    toApply.forEach(x=>{const ci2=col(contactHdr,'address');if(ci2>=0)contactRows[x.ci][ci2]=x.newAddr;});
+    showMsg('batch-addr-msg',`Demo: updated ${toApply.length} address(es) locally.`,'info');return;
+  }
+  showMsg('batch-addr-msg',`Updating ${toApply.length} address(es)…`,'info');
+  const addrCol=col(contactHdr,'address');
+  if(addrCol<0){showMsg('batch-addr-msg','Address column not found.','error');return;}
+  let ok=0,fail=0;
+  for(const {ci,newAddr} of toApply){
+    const sheetRow=ci+2;
+    const range=`${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(addrCol)}${sheetRow}`;
+    try{
+      const res=await authedFetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+        {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newAddr]]})}
+      );
+      if(res.ok){contactRows[ci][addrCol]=newAddr;ok++;}else fail++;
+    }catch{fail++;}
+  }
+  showMsg('batch-addr-msg',`✓ Updated ${ok} address(es).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
+}
+
+// ── Action Plan Batch ──────────────────────────────────────────────────────
+async function applyActionBatch(){
+  const raw=(document.getElementById('batch-action-ids').value||'').trim();
+  const newPlan=(document.getElementById('batch-action-plan').value||'').trim();
+  const newDate=(document.getElementById('batch-action-date').value||'').trim();
+  if(!newPlan&&!newDate){showMsg('batch-action-msg','Enter at least one value.','error');return;}
+  const ids=raw.split(/\n/).map(l=>normId(l.trim())).filter(Boolean);
+  const targets=ids.map(id=>{const ci=contactByAcct.get(id);return{id,ci};}).filter(x=>x.ci!==undefined);
+  if(!targets.length){showMsg('batch-action-msg','No matching AccountIDs found.','error');return;}
+  if(isDemo){showMsg('batch-action-msg',`Demo: would update ${targets.length} contacts.`,'info');return;}
+  showMsg('batch-action-msg',`Updating ${targets.length} contact(s)…`,'info');
+  const planCol=col(contactHdr,'action plan');
+  const dateCol=col(contactHdr,'action date');
+  let ok=0,fail=0;
+  for(const {ci} of targets){
+    const updates=[];
+    if(newPlan&&planCol>=0) updates.push({col:planCol,val:newPlan});
+    if(newDate&&dateCol>=0) updates.push({col:dateCol,val:newDate});
+    for(const {col:c,val} of updates){
+      const range=`${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(c)}${ci+2}`;
+      try{
+        const res=await authedFetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+          {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[val]]})}
+        );
+        if(res.ok){contactRows[ci][c]=val;ok++;}else fail++;
+      }catch{fail++;}
+    }
+  }
+  showMsg('batch-action-msg',`✓ Updated ${ok} field(s) across ${targets.length} contact(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
+}
+
+// ── Giving Category Batch ─────────────────────────────────────────────────
+async function applyCatBatch(){
+  const raw=(document.getElementById('batch-cat-ids').value||'').trim();
+  const newCat=document.getElementById('batch-cat-val').value;
+  const ids=raw.split(/\n/).map(l=>normId(l.trim())).filter(Boolean);
+  const targets=ids.map(id=>{const ci=contactByAcct.get(id);return{id,ci};}).filter(x=>x.ci!==undefined);
+  if(!targets.length){showMsg('batch-cat-msg','No matching AccountIDs found.','error');return;}
+  if(isDemo){showMsg('batch-cat-msg',`Demo: would reclassify ${targets.length} contacts to ${newCat}.`,'info');return;}
+  showMsg('batch-cat-msg',`Updating ${targets.length} contact(s)…`,'info');
+  const catCol=col(contactHdr,'giving category');
+  if(catCol<0){showMsg('batch-cat-msg','Giving Category column not found.','error');return;}
+  let ok=0,fail=0;
+  for(const {ci} of targets){
+    const range=`${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(catCol)}${ci+2}`;
+    try{
+      const res=await authedFetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+        {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newCat]]})}
+      );
+      if(res.ok){contactRows[ci][catCol]=newCat;ok++;}else fail++;
+    }catch{fail++;}
+  }
+  showMsg('batch-cat-msg',`✓ Reclassified ${ok} contact(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
+}
+
+// ── Solicitor Batch ───────────────────────────────────────────────────────
+function onBatchSolSearch(input,dropId,valId){
+  const q=input.value;
+  const drop=document.getElementById(dropId);
+  if(!q.trim()){drop.style.display='none';return;}
+  const all=buildSolList().filter(s=>s.toLowerCase().includes(q.toLowerCase())).slice(0,15);
+  if(!all.length){drop.style.display='none';return;}
+  drop.innerHTML=all.map(s=>`<div class="sol-option" onclick="selectBatchSol('${s.replace(/'/g,"\\'")}','${dropId}','${valId}','${input.id}')">${s}</div>`).join('');
+  drop.style.display='block';
+}
+function selectBatchSol(name,dropId,valId,inputId){
+  document.getElementById(inputId).value=name;
+  document.getElementById(valId).value=name;
+  document.getElementById(dropId).style.display='none';
+}
+
+async function applySolBatch(){
+  const raw=(document.getElementById('batch-sol-ids').value||'').trim();
+  const sol1=document.getElementById('batch-sol1-val').value||document.getElementById('batch-sol1-input').value;
+  const sol2=document.getElementById('batch-sol2-val').value||document.getElementById('batch-sol2-input').value;
+  if(!sol1&&!sol2){showMsg('batch-sol-msg','Enter at least one solicitor.','error');return;}
+  const ids=raw.split(/\n/).map(l=>normId(l.trim())).filter(Boolean);
+  const targets=ids.map(id=>{const ci=contactByAcct.get(id);return{id,ci};}).filter(x=>x.ci!==undefined);
+  if(!targets.length){showMsg('batch-sol-msg','No matching AccountIDs found.','error');return;}
+  if(isDemo){showMsg('batch-sol-msg',`Demo: would assign solicitors to ${targets.length} contacts.`,'info');return;}
+  showMsg('batch-sol-msg',`Updating ${targets.length} contact(s)…`,'info');
+  const sol1Col=col(contactHdr,'solicitor 1');
+  const sol2Col=col(contactHdr,'solicitor 2');
+  let ok=0,fail=0;
+  for(const {ci} of targets){
+    const updates=[];
+    if(sol1&&sol1Col>=0) updates.push({c:sol1Col,v:sol1});
+    if(sol2&&sol2Col>=0) updates.push({c:sol2Col,v:sol2});
+    for(const {c,v} of updates){
+      const range=`${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(c)}${ci+2}`;
+      try{
+        const res=await authedFetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+          {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[v]]})}
+        );
+        if(res.ok){contactRows[ci][c]=v;ok++;}else fail++;
+      }catch{fail++;}
+    }
+  }
+  showMsg('batch-sol-msg',`✓ Updated solicitor(s) for ${targets.length} contact(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
 }
 
 // ─── DEMO MODE ────────────────────────────────────────────────────────────────
