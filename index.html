@@ -189,7 +189,7 @@ select.form-input{cursor:pointer}
 
 <div class="nav" id="main-nav" style="display:none">
   <button class="nav-tab active" onclick="showTab('lookup')" id="tab-lookup">🔍 Lookup</button>
-  <button class="nav-tab" onclick="showTab('query')" id="tab-query">🔎 Query</button>
+  <button class="nav-tab" onclick="showTab('queries')" id="tab-queries">🔎 Query</button>
   <button class="nav-tab" onclick="showTab('add')" id="tab-add">➕ Add</button>
   <button class="nav-tab" onclick="showTab('batch')" id="tab-batch">✏️ Batch</button>
   <button class="nav-tab" onclick="showTab('sync')" id="tab-sync">🔄 Sync</button>
@@ -420,7 +420,7 @@ select.form-input{cursor:pointer}
       <div class="q-section">
         <div class="q-section-head" onclick="toggleQSection('qa')">Action Plan <span id="qa-arrow">▾</span></div>
         <div class="q-section-body" id="qa-body">
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;margin-bottom:6px">
             <select class="form-input" id="q-action-filter" style="flex:1">
               <option value="">Either</option>
               <option value="yes">Has action plan</option>
@@ -428,6 +428,29 @@ select.form-input{cursor:pointer}
             </select>
             <input class="form-input" id="q-action-text" placeholder="Action plan contains…" style="flex:2" />
           </div>
+          <label class="form-label" style="margin-top:8px">Action Month</label>
+          <div style="display:flex;gap:8px">
+            <select class="form-input" id="q-action-month">
+              <option value="">Any month</option>
+              <option value="All Months">🔁 All Months</option>
+              <option value="1">1 – January</option>
+              <option value="2">2 – February</option>
+              <option value="3">3 – March</option>
+              <option value="4">4 – April</option>
+              <option value="5">5 – May</option>
+              <option value="6">6 – June</option>
+              <option value="7">7 – July</option>
+              <option value="8">8 – August</option>
+              <option value="9">9 – September</option>
+              <option value="10">10 – October</option>
+              <option value="11">11 – November</option>
+              <option value="12">12 – December</option>
+            </select>
+            <select class="form-input" id="q-action-year">
+              <option value="">Any year</option>
+            </select>
+          </div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:3px">"All Months" contacts always appear when filtering by month.</div>
         </div>
       </div>
 
@@ -447,7 +470,19 @@ select.form-input{cursor:pointer}
       <div class="q-section">
         <div class="q-section-head" onclick="toggleQSection('qf')">💰 Finance <span id="qf-arrow">▾</span></div>
         <div class="q-section-body collapsed" id="qf-body">
-          <label class="form-label" style="margin-top:0">Total Commitment</label>
+          <label class="form-label" style="margin-top:0">Lifetime Giving</label>
+          <div class="range-row">
+            <select class="form-input" id="qf-life-op" style="flex:none;width:110px">
+              <option value="">Any</option>
+              <option value="gt">Above</option>
+              <option value="lt">Below</option>
+              <option value="between">Between</option>
+            </select>
+            <input class="form-input" id="qf-life-a" placeholder="$" type="number" min="0" />
+            <span id="qf-life-and" style="display:none">and</span>
+            <input class="form-input" id="qf-life-b" placeholder="$" type="number" min="0" style="display:none" />
+          </div>
+          <label class="form-label">Total Commitment</label>
           <div class="range-row">
             <select class="form-input" id="qf-commit-op" style="flex:none;width:110px">
               <option value="">Any</option>
@@ -488,8 +523,18 @@ select.form-input{cursor:pointer}
             <span>to</span>
             <input class="form-input" id="qe-yr-to" placeholder="To year e.g. 2024" type="number" min="2000" max="2030" />
           </div>
-          <label class="form-label">Program contains</label>
-          <input class="form-input" id="qe-prog" placeholder="e.g. Hesder, LLC…" />
+          <label class="form-label">Quick filters</label>
+          <div class="cb-group">
+            <label class="cb-chip"><input type="checkbox" id="qe-army" onchange="updateChip(this)"> 🪖 Went to army</label>
+            <label class="cb-chip"><input type="checkbox" id="qe-llc" onchange="updateChip(this)"> LLC (full program)</label>
+            <label class="cb-chip"><input type="checkbox" id="qe-bet" onchange="updateChip(this)"> Shiur Bet (incl. LLC)</label>
+            <label class="cb-chip"><input type="checkbox" id="qe-housing" onchange="updateChip(this)"> 🏠 LLC Housing only</label>
+          </div>
+          <label class="form-label">Program history contains</label>
+          <input class="form-input" id="qe-prog" placeholder="e.g. Hesder, Aleph…" />
+          <label class="form-label">Also contains (OR)</label>
+          <input class="form-input" id="qe-prog2" placeholder="second term e.g. LLC…" />
+          <div style="font-size:11px;color:var(--gray-500);margin-top:3px">Either term matches. Leave blank to ignore.</div>
         </div>
       </div>
 
@@ -918,7 +963,7 @@ function showTab(name){
   });
   document.getElementById('ledger-section').style.display='none';
   const ps=document.getElementById('persistent-search');if(ps)ps.style.display='none';
-  if(name==='queries'&&contactRows.length) initLocationUI();
+  if(name==='queries'&&contactRows.length){ initLocationUI(); initYearDropdown(); }
 }
 
 
@@ -1107,6 +1152,8 @@ function renderLedger(idx){
   const pattern=get(r,contactHdr,'giving pattern');
   const action=get(r,contactHdr,'action plan');
   const actionDate=get(r,contactHdr,'action date');
+  const actionMonth=get(r,contactHdr,'action month');
+  const actionYear=get(r,contactHdr,'action year');
   const notes=get(r,contactHdr,'notes');
   const futureYrs=get(r,contactHdr,'future pledge yrs');
   const futureAmt=get(r,contactHdr,'future pledge amt');
@@ -1245,7 +1292,7 @@ function renderLedger(idx){
         ${donFutAmt?`<div class="field-row"><span class="field-label">Future Pledge</span><span class="field-value money">${donFutAmt}${donFutYrs?' <span style="font-size:11px;font-weight:400;color:var(--gray-500)">('+donFutYrs+')</span>':''}</span></div>`:''}
         ${totalCommit||get(doRow||[],donOvHdr,'total commitment')?`<div class="field-row"><span class="field-label">Total Commitment</span><span class="field-value money">${fmt$(totalCommit||get(doRow||[],donOvHdr,'total commitment'))}</span></div>`:''}
         ${action?`<div class="field-row"><span class="field-label">Action Plan</span><span class="field-value">${action}</span></div>`:''}
-        ${actionDate?`<div class="field-row"><span class="field-label">Action Date</span><span class="field-value">${actionDate}</span></div>`:''}
+        ${(actionMonth||actionYear||actionDate)?`<div class="field-row"><span class="field-label">Action Date</span><span class="field-value">${actionMonth==='All Months'?'🔁 All Months':(actionMonth?(['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(actionMonth)]||actionMonth):actionDate)+(actionYear?' '+actionYear:'')}</span></div>`:''}
         ${notes?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes}</span></div>`:''}
         ${(yahrFor||yahr)?`<div class="field-row"><span class="field-label">Yahrtzeit</span><span class="field-value">${yahr}${yahrFor?' · '+yahrFor:''}</span></div>`:''}
 
@@ -1382,7 +1429,29 @@ function onEditFieldChange(){
   const r=contactRows[editContactIdx];
   const cur=get(r,contactHdr,field)||get(r,contactHdr,field.toLowerCase());
   document.getElementById('edit-current').textContent=cur||'(empty)';
-  document.getElementById('edit-new').value=cur;
+  const newEl=document.getElementById('edit-new');
+  let wrap=document.getElementById('edit-new-sel-wrap');
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  if(field==='action month'){
+    newEl.style.display='none';
+    if(!wrap){wrap=document.createElement('div');wrap.id='edit-new-sel-wrap';newEl.parentNode.insertBefore(wrap,newEl);}
+    wrap.style.display='block';
+    wrap.innerHTML='<select class="form-input" id="edit-new-sel"><option value="">— none —</option><option value="All Months">All Months</option>'+
+      MONTHS.map((m,i)=>'<option value="'+(i+1)+'" '+(String(i+1)===cur?'selected':'')+'>'+' '+(i+1)+' – '+m+'</option>').join('')+'</select>';
+    if(cur) document.getElementById('edit-new-sel').value=cur;
+  } else if(field==='action year'){
+    newEl.style.display='none';
+    if(!wrap){wrap=document.createElement('div');wrap.id='edit-new-sel-wrap';newEl.parentNode.insertBefore(wrap,newEl);}
+    wrap.style.display='block';
+    wrap.innerHTML='<select class="form-input" id="edit-new-sel"><option value="">— none —</option>'+
+      '<option value="All Years" '+(cur==='All Years'?'selected':'')+'>All Years</option>'+
+      Array.from({length:10},(_,i)=>2026+i).map(y=>'<option value="'+y+'" '+(String(y)===cur?'selected':'')+'>'+y+'</option>').join('')+'</select>';
+    if(cur) document.getElementById('edit-new-sel').value=cur;
+  } else {
+    newEl.style.display='block';
+    if(wrap) wrap.style.display='none';
+    newEl.value=cur;
+  }
 }
 
 async function saveEdit(){
@@ -1468,6 +1537,11 @@ document.addEventListener('change',function(e){
     document.getElementById('qf-commit-and').style.display=v==='between'?'inline':'none';
     document.getElementById('qf-commit-b').style.display=v==='between'?'block':'none';
   }
+  if(e.target.id==='qf-life-op'){
+    const v=e.target.value;
+    document.getElementById('qf-life-and').style.display=v==='between'?'inline':'none';
+    document.getElementById('qf-life-b').style.display=v==='between'?'block':'none';
+  }
 });
 
 // Solicitor typeahead (queries)
@@ -1551,6 +1625,16 @@ let locationMap=null;
 let selectedCountries=new Set();
 let selectedStates=new Set();
 
+function initYearDropdown(){
+  const sel=document.getElementById('q-action-year');
+  if(!sel||sel.options.length>1) return;
+  const o0=document.createElement('option');
+  o0.value='All Years';o0.textContent='🔁 All Years';sel.appendChild(o0);
+  for(let y=2026;y<=2035;y++){
+    const o=document.createElement('option');
+    o.value=String(y);o.textContent=y;sel.appendChild(o);
+  }
+}
 function initLocationUI(){
   if(!locationMap) locationMap=buildLocationOptions();
   const cDiv=document.getElementById('ql-countries');
@@ -1614,6 +1698,10 @@ function _doRunQuery(){
   const selCats=[...document.querySelectorAll('#qc-body input:checked')].map(cb=>cb.value);
   const actionFilter=document.getElementById('q-action-filter').value;
   const actionText=(document.getElementById('q-action-text').value||'').toLowerCase().trim();
+  const qMonthEl=document.getElementById('q-action-month');
+  const qYearEl=document.getElementById('q-action-year');
+  const qActionMonth=qMonthEl?qMonthEl.value:'';
+  const qActionYear=qYearEl?qYearEl.value:'';  const curYear=new Date().getFullYear();
   const qText=(document.getElementById('q-text').value||'').toLowerCase().trim();
   const dedHasEl=document.getElementById('qd-has');
   const dedNotHungEl=document.getElementById('qd-nothung');
@@ -1625,13 +1713,19 @@ function _doRunQuery(){
   const commitA=parseFloat(document.getElementById('qf-commit-a').value)||0;
   const commitB=parseFloat(document.getElementById('qf-commit-b').value)||0;
   const givenYrs=parseInt(document.getElementById('qf-given-yrs').value)||0;
+  const lifeOp=document.getElementById('qf-life-op').value;
+  const lifeA=parseFloat(document.getElementById('qf-life-a').value)||0;
+  const lifeB=parseFloat(document.getElementById('qf-life-b').value)||0;
   const pledgeFilter=document.getElementById('qf-pledge').value;
   const tuiFilter=document.getElementById('qf-tui').value;
   const yrFrom=parseInt(document.getElementById('qe-yr-from').value)||0;
   const yrTo=parseInt(document.getElementById('qe-yr-to').value)||0;
   const progText=(document.getElementById('qe-prog').value||'').toLowerCase().trim();
-  const curYear=new Date().getFullYear();
-
+  const progText2=(document.getElementById('qe-prog2').value||'').toLowerCase().trim();
+  const qeArmy=document.getElementById('qe-army')&&document.getElementById('qe-army').checked;
+  const qeLLC=document.getElementById('qe-llc')&&document.getElementById('qe-llc').checked;
+  const qeBet=document.getElementById('qe-bet')&&document.getElementById('qe-bet').checked;
+  const qeHousing=document.getElementById('qe-housing')&&document.getElementById('qe-housing').checked;
   const ISRAEL_KW=['israel','tel aviv','jerusalem','haifa','rishon','netanya','raanana','modin','efrat','gush','ramat gan'];
   const CANADA_KW=['ontario','quebec','british columbia','alberta','toronto','montreal','vancouver',' on ',' qc ',' bc '];
   const UK_KW=['united kingdom','england','london','manchester'];
@@ -1708,6 +1802,18 @@ function _doRunQuery(){
     if(actionFilter==='yes'&&!action.trim()) return;
     if(actionFilter==='no'&&action.trim()) return;
     if(actionText&&!action.toLowerCase().includes(actionText)) return;
+    if(qActionMonth){
+      const am=get(r,contactHdr,'action month')||'';
+      const ay=get(r,contactHdr,'action year')||'';
+      // Month check: All Months always passes
+      if(am!=='All Months'){
+        if(!am||am!==qActionMonth) return;
+      }
+      // Year check: All Years always passes; blank year also passes
+      if(qActionYear&&qActionYear!=='All Years'){
+        if(ay&&ay!=='All Years'&&ay!==qActionYear) return;
+      }
+    }
 
     // ── Dedication ──
     const dedIdxArr=dedByAcct.get(acctId)||[];
@@ -1728,6 +1834,13 @@ function _doRunQuery(){
     // ── Finance ──
     const doIdx=donOvByAcct.get(acctId);
     const doRow=doIdx!==undefined?donOvRows[doIdx]:null;
+    if(lifeOp&&doRow){
+      const lg=parseFloat(String(get(doRow,donOvHdr,'lifetime giving')||0).replace(/[$,]/g,''))||
+               parseFloat(String(get(r,contactHdr,'lifetime giving (if donor 4k+)')||0).replace(/[$,]/g,''))||0;
+      if(lifeOp==='gt'&&lg<=lifeA) return;
+      if(lifeOp==='lt'&&lg>=lifeA) return;
+      if(lifeOp==='between'&&(lg<lifeA||lg>lifeB)) return;
+    }
     if(commitOp){
       const tc=parseFloat((get(r,contactHdr,'total commitment')||'0').replace(/[$,]/g,''))||
                parseFloat(doRow?String(get(doRow,donOvHdr,'total commitment')||0).replace(/[$,]/g,''):'0')||0;
@@ -1751,7 +1864,8 @@ function _doRunQuery(){
     if(tuiFilter==='yes'&&!tuiOvByAcct.has(acctId)) return;
 
     // ── Educational (with bad-status exclusion) ──
-    if(yrFrom||yrTo||progText){
+    const needsEd=yrFrom||yrTo||progText||progText2||qeArmy||qeLLC||qeBet||qeHousing;
+    if(needsEd){
       const ownSIs=studentByAcct.get(acctId)||[];
       const childSIs=studentByAcct.get('p:'+acctId)||[];
       const allSIs=[...ownSIs,...childSIs];
@@ -1763,10 +1877,31 @@ function _doRunQuery(){
         const yr=parseInt(get(sr,studentHdr,'mostrecentyear'))||0;
         const prog=(get(sr,studentHdr,'programhistory')||'').toLowerCase();
         const rprog=(get(sr,studentHdr,'mostrecentprogram')||'').toLowerCase();
+        const allProg=prog+' '+rprog;
+        const mil=(get(sr,studentHdr,'militarystatus')||'').toLowerCase();
+        const llcCol=(get(sr,studentHdr,'did idf through llc')||'').toLowerCase();
+        const housingTag=(get(sr,studentHdr,'housingtag')||'').trim();
+        const housingStart=(get(sr,studentHdr,'llc housing starting date')||'').trim();
+        const hasHousing=!!(housingTag||housingStart);
         let ok=true;
         if(yrFrom&&yr<yrFrom) ok=false;
         if(yrTo&&yr>yrTo) ok=false;
-        if(progText&&!prog.includes(progText)&&!rprog.includes(progText)) ok=false;
+        // Army: military status is non-empty and not blank/NA
+        if(qeArmy&&(!mil||mil==='n/a'||mil==='no'||mil==='none')) ok=false;
+        // LLC: did idf through llc column is yes/true, OR program contains LLC
+        if(qeLLC&&!(llcCol==='yes'||llcCol==='true'||allProg.includes('llc'))) ok=false;
+        // Shiur Bet: program contains 'bet' OR contains 'llc' (LLC implies Bet)
+        if(qeBet&&!allProg.includes('bet')&&!allProg.includes('llc')) ok=false;
+        // LLC Housing only: has housing tag or start date
+        if(qeHousing&&!hasHousing) ok=false;
+        // Program text (OR logic between two terms)
+        if(progText||progText2){
+          const t1ok=progText&&(allProg.includes(progText));
+          const t2ok=progText2&&(allProg.includes(progText2));
+          if(progText&&progText2){if(!t1ok&&!t2ok)ok=false;}
+          else if(progText&&!t1ok)ok=false;
+          else if(progText2&&!t2ok)ok=false;
+        }
         return ok;
       });
       if(!passEd) return;
@@ -1800,10 +1935,12 @@ function clearQuery(){
   document.querySelectorAll('#tab-queries-content input[type=checkbox]').forEach(cb=>{
     cb.checked=false; cb.closest('.cb-chip')&&cb.closest('.cb-chip').classList.remove('checked');
   });
-  ['q-action-filter','qf-commit-op','qf-pledge','qf-tui'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  ['q-action-text','q-text','qf-commit-a','qf-commit-b','qf-given-yrs','qe-yr-from','qe-yr-to','qe-prog','sol-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['q-action-filter','q-action-month','q-action-year','qf-life-op','qf-commit-op','qf-pledge','qf-tui'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['q-action-text','q-text','qf-life-a','qf-life-b','qf-commit-a','qf-commit-b','qf-given-yrs','qe-yr-from','qe-yr-to','qe-prog','qe-prog2','sol-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('qf-commit-and').style.display='none';
   document.getElementById('qf-commit-b').style.display='none';
+  document.getElementById('qf-life-and').style.display='none';
+  document.getElementById('qf-life-b').style.display='none';
   selectedSolicitors.clear(); renderSolChips();
   selectedCountries.clear(); selectedStates.clear();
   if(locationMap) renderStateOptions();
