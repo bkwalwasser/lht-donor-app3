@@ -193,6 +193,7 @@ select.form-input{cursor:pointer}
   <button class="nav-tab" onclick="showTab('add')" id="tab-add">➕ Add</button>
   <button class="nav-tab" onclick="showTab('batch')" id="tab-batch">✏️ Batch</button>
   <button class="nav-tab" onclick="showTab('sync')" id="tab-sync">🔄 Sync</button>
+  <button class="nav-tab" onclick="showTab('reports')" id="tab-reports">📊 Reports</button>
 </div>
 
 <!-- Persistent search bar (shown when in ledger view) -->
@@ -825,6 +826,66 @@ select.form-input{cursor:pointer}
     <div id="sync-results" style="display:none"></div>
   </div>
 
+  <!-- REPORTS TAB -->
+  <div id="tab-reports-content" style="display:none">
+
+    <div class="card">
+      <div class="section-head">🎁 Bonus Tracker</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Donations with a bonus status set in Donations_Detail. Blank/unset rows are treated as not-yet-processed so nothing falls through the cracks.</p>
+      <label class="form-label" style="margin-top:0">Show</label>
+      <select class="form-input" id="bonus-filter">
+        <option value="needs-action">Needs action (Eligible, Not Processed + blank + Not Reviewed)</option>
+        <option value="not-eligible">Not Eligible</option>
+        <option value="eligible-not-processed">Eligible, Not Processed (set only)</option>
+        <option value="not-reviewed">Not Reviewed (set only)</option>
+        <option value="blank">Blank / no status set</option>
+        <option value="done">Eligible, Done</option>
+        <option value="all">All bonus rows</option>
+      </select>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary btn-sm" onclick="loadBonusList()">Run</button>
+        <button class="btn btn-sm" onclick="downloadBonusCSV()">⬇️ CSV</button>
+      </div>
+      <div id="bonus-count" style="font-size:12px;color:var(--gray-500);margin-top:8px"></div>
+      <div id="bonus-list" style="margin-top:8px;max-height:340px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius-sm)"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label class="form-label" style="margin:0;white-space:nowrap">Set selected to</label>
+        <select class="form-input" id="bonus-new-status" style="max-width:220px">
+          <option value="Not Eligible">Not Eligible</option>
+          <option value="Eligible, Not Processed">Eligible, Not Processed</option>
+          <option value="Eligible, Done" selected>Eligible, Done</option>
+          <option value="Not Reviewed">Not Reviewed</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="applyBonusBatch()">Apply to selected</button>
+      </div>
+      <div id="bonus-msg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">📊 Campaign / Item Report</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Totals for a specific fund or campaign (the "Applied To" field) within a date range. Rows with a blank Applied To are broken out separately rather than silently excluded, so the report still reconciles against the full total for the range.</p>
+      <label class="form-label" style="margin-top:0">Applied To</label>
+      <select class="form-input" id="camp-applied-to"><option value="">— choose campaign / fund —</option></select>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <div style="flex:1">
+          <label class="form-label">From date</label>
+          <input class="form-input" type="date" id="camp-date-from" />
+        </div>
+        <div style="flex:1">
+          <label class="form-label">To date</label>
+          <input class="form-input" type="date" id="camp-date-to" />
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary btn-sm" onclick="runCampaignReport()">Run report</button>
+        <button class="btn btn-sm" onclick="downloadCampaignCSV()">⬇️ CSV</button>
+      </div>
+      <div id="camp-summary" style="margin-top:10px"></div>
+      <div id="camp-list" style="margin-top:8px;max-height:300px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius-sm)"></div>
+    </div>
+
+  </div>
+
 </div><!-- /main -->
 
 <script>
@@ -1024,7 +1085,7 @@ function disconnect(){
   document.getElementById('main-nav').style.display='none';
   document.getElementById('topbar-badge').style.display='none';
   document.getElementById('persistent-search').style.display='none';
-  ['lookup','queries','add','batch','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
+  ['lookup','queries','add','batch','sync','reports'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
   document.getElementById('ledger-section').style.display='none';
   document.getElementById('msg').style.display='none';
 }
@@ -1033,13 +1094,14 @@ function disconnect(){
 let activeTab='lookup';
 function showTab(name){
   activeTab=name;
-  ['lookup','queries','add','batch','sync'].forEach(t=>{
+  ['lookup','queries','add','batch','sync','reports'].forEach(t=>{
     const c=document.getElementById('tab-'+t+'-content');if(c)c.style.display=t===name?'block':'none';
     const b=document.getElementById('tab-'+t);if(b)b.classList.toggle('active',t===name);
   });
   document.getElementById('ledger-section').style.display='none';
   const ps=document.getElementById('persistent-search');if(ps)ps.style.display='none';
   if(name==='queries'&&contactRows.length){ initLocationUI(); initYearDropdown(); }
+  if(name==='reports'&&donDetRows.length){ initCampaignDropdown(); loadBonusList(); }
 }
 
 
@@ -1199,7 +1261,7 @@ function openLedger(idx,fromSearch){
   currentAcctId=normId(get(contactRows[idx],contactHdr,'accountid'));
   emailCheckboxes={};
   renderLedger(idx);
-  ['lookup','queries','add','batch','sync'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
+  ['lookup','queries','add','batch','sync','reports'].forEach(t=>{const el=document.getElementById('tab-'+t+'-content');if(el)el.style.display='none';});
   document.getElementById('ledger-section').style.display='block';
   document.getElementById('edit-panel').classList.remove('open');
   document.getElementById('email-panel').classList.remove('open');
@@ -2666,6 +2728,175 @@ async function applySolBatch(){
     }
   }
   showMsg('batch-sol-msg',`✓ Updated solicitor(s) for ${targets.length} contact(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
+}
+
+// ─── BONUS TRACKER ──────────────────────────────────────────────────────────
+// NOTE: "Bonus Status" and "Bonus Staff Member" are newly added columns in
+// Donations_Detail. Header matching below tries several likely spellings —
+// if the columns aren't found, check the exact header text in the sheet and
+// adjust the key lists in bonusStatusCol()/bonusStaffCol() to match.
+function bonusStatusCol(){return col(donDetHdr,'bonus status','bonusstatus','bonus_status');}
+function bonusStaffCol(){return col(donDetHdr,'bonus staff member','bonus staff','bonusstaff','bonus_staff_member','staff member','bonus staff name');}
+
+let lastBonusRows=[];
+function bonusRowMatches(status,filterVal){
+  const s=(status||'').trim();
+  const sl=s.toLowerCase();
+  switch(filterVal){
+    case 'needs-action': return !s || sl==='eligible, not processed' || sl==='not reviewed';
+    case 'not-eligible': return sl==='not eligible';
+    case 'eligible-not-processed': return sl==='eligible, not processed';
+    case 'not-reviewed': return sl==='not reviewed';
+    case 'blank': return !s;
+    case 'done': return sl==='eligible, done';
+    case 'all': return true;
+    default: return true;
+  }
+}
+function loadBonusList(){
+  const sCol=bonusStatusCol(), stCol=bonusStaffCol();
+  const list=document.getElementById('bonus-list');
+  if(sCol<0){
+    list.innerHTML='<div style="padding:12px;font-size:12px;color:#A32D2D">Couldn\'t find a "Bonus Status" column in Donations_Detail. Check the exact header text and update bonusStatusCol() in the code if needed.</div>';
+    document.getElementById('bonus-count').textContent='';
+    lastBonusRows=[];
+    return;
+  }
+  const filterVal=document.getElementById('bonus-filter').value;
+  const rows=[];
+  donDetRows.forEach((dr,di)=>{
+    const status=get(dr,donDetHdr,'bonus status','bonusstatus','bonus_status');
+    if(!bonusRowMatches(status,filterVal)) return;
+    const staff=stCol>=0?(dr[stCol]||''):'';
+    const acctId=normId(get(dr,donDetHdr,'payeract_id'));
+    const ci=contactByAcct.get(acctId);
+    const name=ci!==undefined?get(contactRows[ci],contactHdr,'name'):('AccountID '+acctId);
+    const date=get(dr,donDetHdr,'date');
+    const amt=get(dr,donDetHdr,'appliedamount');
+    const appliedTo=get(dr,donDetHdr,'appliedto');
+    rows.push({di,acctId,name,status:status||'(blank)',staff:staff||'(unassigned)',date,amt,appliedTo});
+  });
+  lastBonusRows=rows;
+  document.getElementById('bonus-count').textContent=`${rows.length} donation(s) match.`;
+  list.innerHTML=rows.length?rows.map(r=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--gray-200);cursor:pointer;font-size:12px">
+      <input type="checkbox" data-di="${r.di}" checked style="accent-color:var(--blue)" />
+      <div style="flex:1">
+        <b>${r.name}</b> · ${r.amt?fmt$(r.amt):''} ${r.date?'· '+r.date:''}<br/>
+        <span style="color:var(--gray-500)">Status: ${r.status} · Staff: ${r.staff}${r.appliedTo?' · Applied To: '+r.appliedTo:''}</span>
+      </div>
+    </label>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--gray-500)">No donations match this filter.</div>';
+}
+async function applyBonusBatch(){
+  const sCol=bonusStatusCol();
+  if(sCol<0){showMsg('bonus-msg','Bonus Status column not found.','error');return;}
+  const newStatus=document.getElementById('bonus-new-status').value;
+  const checked=[...document.querySelectorAll('#bonus-list input[type=checkbox]:checked')];
+  if(!checked.length){showMsg('bonus-msg','Nothing selected.','error');return;}
+  if(isDemo){showMsg('bonus-msg',`Demo: would update ${checked.length} bonus record(s).`,'info');return;}
+  showMsg('bonus-msg',`Updating ${checked.length} record(s)…`,'info');
+  let ok=0,fail=0;
+  for(const cb of checked){
+    const di=parseInt(cb.dataset.di);
+    const sheetRow=di+2;
+    const range=`${encodeURIComponent(TAB.DON_DETAIL)}!${colToLetter(sCol)}${sheetRow}`;
+    try{
+      const res=await authedFetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+        {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newStatus]]})}
+      );
+      if(res.ok){donDetRows[di][sCol]=newStatus;ok++;}else fail++;
+    }catch{fail++;}
+  }
+  showMsg('bonus-msg',`✓ Updated ${ok} record(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
+  loadBonusList();
+}
+function downloadBonusCSV(){
+  if(!lastBonusRows.length){alert('Run the bonus report first.');return;}
+  const headers=['Name','AccountID','Bonus Status','Bonus Staff Member','Date','Amount','Applied To'];
+  const rows=lastBonusRows.map(r=>[r.name,r.acctId,r.status,r.staff,r.date,r.amt,r.appliedTo]);
+  const csv=[headers,...rows].map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='lht_bonus_tracker.csv'; a.click();
+}
+
+// ─── CAMPAIGN / ITEM REPORT ─────────────────────────────────────────────────
+// NOTE: rows with a blank "Applied To" are never silently dropped — they are
+// always shown as a separate "(blank / uncategorized)" line so the totals
+// for a date range still reconcile against all donations in that range,
+// even before every row's Applied To has been backfilled.
+function initCampaignDropdown(){
+  const sel=document.getElementById('camp-applied-to');
+  if(!sel||sel.dataset.loaded)return;
+  const vals=new Set();
+  donDetRows.forEach(dr=>{const v=(get(dr,donDetHdr,'appliedto')||'').trim();if(v)vals.add(v);});
+  [...vals].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
+  sel.dataset.loaded='1';
+}
+function parseRowDate(s){
+  if(!s)return null;
+  const d=new Date(s);
+  return isNaN(d.getTime())?null:d;
+}
+let lastCampaignRows=[];
+function runCampaignReport(){
+  const applied=document.getElementById('camp-applied-to').value;
+  const fromVal=document.getElementById('camp-date-from').value;
+  const toVal=document.getElementById('camp-date-to').value;
+  const from=fromVal?new Date(fromVal):null;
+  const to=toVal?new Date(toVal):null;
+  if(to) to.setHours(23,59,59,999);
+
+  let inRangeTotal=0,inRangeCount=0;
+  let matchTotal=0,matchCount=0;
+  let blankTotal=0,blankCount=0;
+  let undatedCount=0;
+  const matchRows=[];
+
+  donDetRows.forEach(dr=>{
+    const dateStr=get(dr,donDetHdr,'date');
+    const d=parseRowDate(dateStr);
+    if((from||to)){
+      if(!d){undatedCount++;return;} // can't place an undated row in a date range
+      if(from&&d<from)return;
+      if(to&&d>to)return;
+    }
+    const amt=parseFloat(String(get(dr,donDetHdr,'appliedamount')).replace(/[$,\s]/g,''))||0;
+    const appliedTo=(get(dr,donDetHdr,'appliedto')||'').trim();
+    inRangeTotal+=amt; inRangeCount++;
+    if(!appliedTo){ blankTotal+=amt; blankCount++; return; }
+    if(applied && appliedTo!==applied) return;
+    matchTotal+=amt; matchCount++;
+    const acctId=normId(get(dr,donDetHdr,'payeract_id'));
+    const ci=contactByAcct.get(acctId);
+    const name=ci!==undefined?get(contactRows[ci],contactHdr,'name'):('AccountID '+acctId);
+    matchRows.push({name,acctId,date:dateStr,amt,appliedTo});
+  });
+
+  lastCampaignRows=matchRows;
+  const label=applied||'(all campaigns)';
+  document.getElementById('camp-summary').innerHTML=`
+    <div style="font-size:13px;line-height:1.7">
+      <b>${label}</b>: ${matchCount} donation(s), ${fmt$(matchTotal)||'$0'}<br/>
+      <span style="color:var(--gray-500)">Blank / uncategorized Applied To in range: ${blankCount} donation(s), ${fmt$(blankTotal)||'$0'}<br/>
+      All donations in range (any campaign): ${inRangeCount} donation(s), ${fmt$(inRangeTotal)||'$0'}
+      ${undatedCount?`<br/>⚠️ ${undatedCount} donation(s) skipped — no parseable date, so they couldn't be placed in the range.`:''}</span>
+    </div>`;
+  const list=document.getElementById('camp-list');
+  list.innerHTML=matchRows.length?matchRows.map(r=>`
+    <div style="padding:7px 10px;border-bottom:1px solid var(--gray-200);font-size:12px">
+      <b>${r.name}</b> · ${fmt$(r.amt)} ${r.date?'· '+r.date:''}
+    </div>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--gray-500)">No matching donations.</div>';
+}
+function downloadCampaignCSV(){
+  if(!lastCampaignRows.length){alert('Run the campaign report first.');return;}
+  const headers=['Name','AccountID','Date','Amount','Applied To'];
+  const rows=lastCampaignRows.map(r=>[r.name,r.acctId,r.date,r.amt,r.appliedTo]);
+  const csv=[headers,...rows].map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='lht_campaign_report.csv'; a.click();
 }
 
 // ─── DEMO MODE ────────────────────────────────────────────────────────────────
