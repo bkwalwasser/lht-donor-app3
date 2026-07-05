@@ -367,12 +367,22 @@ select.form-input{cursor:pointer}
             <span style="font-size:11px;color:var(--gray-500);align-self:center;margin-left:4px">How to combine types</span>
           </div>
           <div class="cb-group" id="qt-chips">
-            <label class="cb-chip"><input type="checkbox" value="donor" onchange="updateChip(this)"> Donor (4k+)</label>
+            <label class="cb-chip"><input type="checkbox" value="donor" onchange="updateChip(this)"> Donor</label>
             <label class="cb-chip"><input type="checkbox" value="student" onchange="updateChip(this)"> Student/Alumni</label>
             <label class="cb-chip"><input type="checkbox" value="parent" onchange="updateChip(this)"> Parent</label>
             <label class="cb-chip"><input type="checkbox" value="prospective" onchange="updateChip(this)"> Prospective</label>
             <label class="cb-chip"><input type="checkbox" value="school" onchange="updateChip(this)"> School</label>
             <label class="cb-chip"><input type="checkbox" value="staff" onchange="updateChip(this)"> Staff</label>
+          </div>
+          <div style="margin-top:10px;padding-left:10px;border-left:2px solid var(--gray-200)">
+            <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px">Donor level (optional — leave blank for any donor)</div>
+            <div class="cb-group" id="qt-tier-chips">
+              <label class="cb-chip"><input type="checkbox" value="Donor under 5k" onchange="updateChip(this)"> Under 5k</label>
+              <label class="cb-chip"><input type="checkbox" value="Donor 5k-9.9k" onchange="updateChip(this)"> 5k–9.9k</label>
+              <label class="cb-chip"><input type="checkbox" value="Donor 10k-24.9k" onchange="updateChip(this)"> 10k–24.9k</label>
+              <label class="cb-chip"><input type="checkbox" value="Donor 25k-99.9k" onchange="updateChip(this)"> 25k–99.9k</label>
+              <label class="cb-chip"><input type="checkbox" value="Donor Above 100k" onchange="updateChip(this)"> Above 100k</label>
+            </div>
           </div>
         </div>
       </div>
@@ -962,6 +972,39 @@ function hdr(arr){const h={};(arr||[]).forEach((v,i)=>{h[(v||'').trim().toLowerC
 function col(hdrObj,...keys){for(const k of keys){const idx=hdrObj[k.toLowerCase()];if(idx!==undefined)return idx;}return -1;}
 function get(row,hdrObj,...keys){const i=col(hdrObj,...keys);return i>=0?(row[i]||''):'';}
 function normId(v){if(!v)return'';return String(v).trim().replace(/,/g,'').replace(/\.0+$/,'');}
+
+// ─── YAHRTZEIT → ACTION MONTHS (computed live, never written back to sheet) ───
+// Each Hebrew month maps to the 3 Gregorian months its yahrtzeit falls within
+// year over year. Fixed table — verified to cover all 12 months with no
+// gaps/overlaps (each window starts 1 month after the previous, wrapping Dec→Jan).
+const HEBREW_MONTH_TO_GREGORIAN={
+  'Elul':[7,8,9],'Tishrei':[8,9,10],'Cheshvan':[9,10,11],'Kislev':[10,11,12],
+  'Tevet':[11,12,1],'Shevat':[12,1,2],'Adar':[1,2,3],'Nissan':[2,3,4],
+  'Iyar':[3,4,5],'Sivan':[4,5,6],'Tammuz':[5,6,7],'Av':[6,7,8]
+};
+function yahrtzeitActionMonths(r){
+  const m=(get(r,contactHdr,'yahrtzeit month')||'').trim();
+  return HEBREW_MONTH_TO_GREGORIAN[m]||[];
+}
+// Union of the manual Action Month field + the yahrtzeit-derived window,
+// computed fresh every time — nothing here is read from or written to a
+// "Yahrtzeit Action Months" sheet column.
+function combinedActionMonths(r){
+  const raw=(get(r,contactHdr,'action month')||'').trim();
+  const set=new Set();
+  if(raw){
+    if(raw.toLowerCase()==='all months'){for(let i=1;i<=12;i++)set.add(i);}
+    else{raw.split(',').forEach(p=>{const n=parseInt(p.trim(),10);if(!isNaN(n)&&n>=1&&n<=12)set.add(n);});}
+  }
+  yahrtzeitActionMonths(r).forEach(n=>set.add(n));
+  return set;
+}
+const MONTH_NAMES=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function formatActionMonths(monthSet){
+  if(!monthSet.size)return'';
+  if(monthSet.size===12)return'🔁 All Months';
+  return[...monthSet].sort((a,b)=>a-b).map(m=>MONTH_NAMES[m]).join(', ');
+}
 function fmt$(v){const n=parseFloat(String(v).replace(/[$,\s]/g,''));return isNaN(n)||n<=0?'':'$'+Math.round(n).toLocaleString();}
 function initials(name){const p=name.replace(/,.*/,'').trim().split(/\s+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():name.slice(0,2).toUpperCase();}
 function avatarCls(cat){if(!cat)return'';if(cat.includes('LOYAL'))return'loyal';if(cat.includes('RECENT'))return'recent';if(cat.includes('LAPSED'))return'lapsed';return'';}
@@ -1172,7 +1215,7 @@ function doSearch(q){
     const hay=[name,addr,email,id].join(' ').toLowerCase();
     if(!matches(hay))return;
     const cat=get(r,contactHdr,'giving category');
-    const life=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+    const life=get(r,contactHdr,'lifetime','lifetime giving (if donor 4k+)');
     const city=(addr||'').split(',').slice(1,3).join(',').trim();
     const acctIdS=normId(get(r,contactHdr,'accountid'));
     const ownSIs=studentByAcct.get(acctIdS)||[];
@@ -1205,7 +1248,7 @@ function searchContacts(q){
     const hay=[name,addr,email,id].join(' ').toLowerCase();
     if(!matches(hay))return;
     const cat=get(r,contactHdr,'giving category');
-    const life=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+    const life=get(r,contactHdr,'lifetime','lifetime giving (if donor 4k+)');
     const city=(addr||'').split(',').slice(1,3).join(',').trim();
     // Student/army snippet
     const acctIdS = normId(get(r,contactHdr,'accountid'));
@@ -1311,19 +1354,23 @@ function renderLedger(idx){
   const phone=get(r,contactHdr,'phone');
   const email=get(r,contactHdr,'email');
   const category=get(r,contactHdr,'category');
-  const lifetime=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+  const lifetime=get(r,contactHdr,'lifetime','lifetime giving (if donor 4k+)');
   const pattern=get(r,contactHdr,'giving pattern');
   const action=get(r,contactHdr,'action plan');
   const actionDate=get(r,contactHdr,'action date');
   const actionMonth=get(r,contactHdr,'action month');
   const actionYear=get(r,contactHdr,'action year');
+  const yahrMonth=get(r,contactHdr,'yahrtzeit month');
+  const yahrDay=get(r,contactHdr,'yahrtzeit day of month');
+  const allActionMonthsSet=combinedActionMonths(r);
+  const allActionMonthsDisplay=formatActionMonths(allActionMonthsSet);
   const notes=get(r,contactHdr,'notes');
   const futureYrs=get(r,contactHdr,'future pledge yrs');
   const futureAmt=get(r,contactHdr,'future pledge amt');
   const totalCommit=get(r,contactHdr,'total commitment');
   const faulty=get(r,contactHdr,'faulty phone or address');
   const yahrFor=get(r,contactHdr,'yahrtzeit for');
-  const yahr=get(r,contactHdr,'yahrtzeit');
+  const yahr=yahrMonth?(yahrDay?yahrDay+' '+yahrMonth:yahrMonth):'';
   const acctId=normId(get(r,contactHdr,'accountid'));
 
   // Relationships
@@ -1455,7 +1502,7 @@ function renderLedger(idx){
         ${donFutAmt?`<div class="field-row"><span class="field-label">Future Pledge</span><span class="field-value money">${donFutAmt}${donFutYrs?' <span style="font-size:11px;font-weight:400;color:var(--gray-500)">('+donFutYrs+')</span>':''}</span></div>`:''}
         ${totalCommit||get(doRow||[],donOvHdr,'total commitment')?`<div class="field-row"><span class="field-label">Total Commitment</span><span class="field-value money">${fmt$(totalCommit||get(doRow||[],donOvHdr,'total commitment'))}</span></div>`:''}
         ${action?`<div class="field-row"><span class="field-label">Action Plan</span><span class="field-value">${action}</span></div>`:''}
-        ${(actionMonth||actionYear||actionDate)?`<div class="field-row"><span class="field-label">Action Date</span><span class="field-value">${actionMonth==='All Months'?'🔁 All Months':(actionMonth?(['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(actionMonth)]||actionMonth):actionDate)+(actionYear?' '+actionYear:'')}</span></div>`:''}
+        ${allActionMonthsDisplay?`<div class="field-row"><span class="field-label">Action Months</span><span class="field-value">${allActionMonthsDisplay}${actionYear?' '+actionYear:''}${yahrMonth?` <span style="font-size:11px;font-weight:400;color:var(--gray-500)">(incl. ${yahrMonth}${yahrDay?' '+yahrDay:''} yahrtzeit)</span>`:''}</span></div>`:''}
         ${notes?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes}</span></div>`:''}
         ${(yahrFor||yahr)?`<div class="field-row"><span class="field-label">Yahrtzeit</span><span class="field-value">${yahr}${yahrFor?' · '+yahrFor:''}</span></div>`:''}
 
@@ -1863,6 +1910,7 @@ function _doRunQuery(){
 
   // Gather filters
   const selTypes=[...document.querySelectorAll('#qt-chips input:checked')].map(cb=>cb.value);
+  const selTiers=[...document.querySelectorAll('#qt-tier-chips input:checked')].map(cb=>cb.value);
   const selCats=[...document.querySelectorAll('#qc-body input:checked')].map(cb=>cb.value);
   const actionFilter=document.getElementById('q-action-filter').value;
   const actionText=(document.getElementById('q-action-text').value||'').toLowerCase().trim();
@@ -1930,7 +1978,7 @@ function _doRunQuery(){
     const acctId=normId(get(r,contactHdr,'accountid'));
     const sol1=(get(r,contactHdr,'solicitor 1')||'').trim();
     const sol2=(get(r,contactHdr,'solicitor 2')||'').trim();
-    const lifetime=get(r,contactHdr,'lifetime giving (if donor 4k+)');
+    const lifetime=get(r,contactHdr,'lifetime','lifetime giving (if donor 4k+)');
 
     // ── Contact type filter ──
     if(selTypes.length){
@@ -1945,6 +1993,12 @@ function _doRunQuery(){
       });
       const pass=qtMode==='AND'?typeMatches.every(Boolean):typeMatches.some(Boolean);
       if(!pass) return;
+    }
+
+    // ── Donor tier (optional sub-filter — only narrows within donors) ──
+    if(selTiers.length){
+      const tierMatch=selTiers.some(t=>category.includes(t.toLowerCase()));
+      if(!tierMatch) return;
     }
 
     // ── Giving category ──
@@ -1971,14 +2025,15 @@ function _doRunQuery(){
     if(actionFilter==='no'&&action.trim()) return;
     if(actionText&&!action.toLowerCase().includes(actionText)) return;
     if(qActionMonth){
-      const am=get(r,contactHdr,'action month')||'';
-      const ay=get(r,contactHdr,'action year')||'';
-      // Month check: All Months always passes
-      if(am!=='All Months'){
-        if(!am||am!==qActionMonth) return;
+      const months=combinedActionMonths(r);
+      const isRecurring=months.size===12;
+      if(!isRecurring){
+        const qm=qActionMonth==='All Months'?null:parseInt(qActionMonth,10);
+        if(qm===null||!months.has(qm)) return;
       }
       // Year check: All Years always passes; blank year also passes
       if(qActionYear&&qActionYear!=='All Years'){
+        const ay=get(r,contactHdr,'action year')||'';
         if(ay&&ay!=='All Years'&&ay!==qActionYear) return;
       }
     }
@@ -2004,7 +2059,7 @@ function _doRunQuery(){
     const doRow=doIdx!==undefined?donOvRows[doIdx]:null;
     if(lifeOp&&doRow){
       const lg=parseFloat(String(get(doRow,donOvHdr,'lifetime giving')||0).replace(/[$,]/g,''))||
-               parseFloat(String(get(r,contactHdr,'lifetime giving (if donor 4k+)')||0).replace(/[$,]/g,''))||0;
+               parseFloat(String(get(r,contactHdr,'lifetime','lifetime giving (if donor 4k+)')||0).replace(/[$,]/g,''))||0;
       if(lifeOp==='gt'&&lg<=lifeA) return;
       if(lifeOp==='lt'&&lg>=lifeA) return;
       if(lifeOp==='between'&&(lg<lifeA||lg>lifeB)) return;
@@ -2099,7 +2154,7 @@ const Q_COL_DEFS={
   sol1:       {label:'Solicitor 1', fn:(r,x)=>get(r,contactHdr,'solicitor 1')},
   sol2:       {label:'Solicitor 2', fn:(r,x)=>get(r,contactHdr,'solicitor 2')},
   actionplan: {label:'Action Plan', fn:(r,x)=>get(r,contactHdr,'action plan')},
-  actiondate: {label:'Action Date', fn:(r,x)=>{const m=get(r,contactHdr,'action month');const y=get(r,contactHdr,'action year');return m?(m==='All Months'?'🔁 All Months':(['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]||m))+(y?' '+y:''):''}},
+  actiondate: {label:'Action Date', fn:(r,x)=>{const y=get(r,contactHdr,'action year');const disp=formatActionMonths(combinedActionMonths(r));return disp?disp+(y?' '+y:''):'';}},
   notes:      {label:'Notes',       fn:(r,x)=>get(r,contactHdr,'notes')},
   lifetime:   {label:'Lifetime',    fn:(r,x)=>x.lifetime?fmt$(x.lifetime):'—'},
   lastgift:   {label:'Last Gift',   fn:(r,x)=>{const d=donOvByAcct.get(normId(get(r,contactHdr,'accountid')));return d!==undefined?fmt$(get(donOvRows[d],donOvHdr,'last gift amount')):''}},
@@ -2119,7 +2174,7 @@ const Q_COL_DEFS={
   hesder:     {label:'Hesder',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'hesder')).filter(Boolean).join(', ')}},
   parent:     {label:'Parent',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('parent')||rt.includes('father')||rt.includes('mother')){const on=get(rr,relHdr,isA?'personb_name':'persona_name');const oid=normId(get(rr,relHdr,isA?'personb_accountid':'persona_accountid'));const ci2=contactByAcct.get(oid);const ph=ci2!==undefined?get(contactRows[ci2],contactHdr,'phone'):'';out+=on+(ph?' ('+ph+')':'');}});return out}},
   spouse:     {label:'Spouse',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('spouse')||rt.includes('wife')||rt.includes('husband')||rt.includes('partner')){out=get(rr,relHdr,isA?'personb_name':'persona_name');}});return out}},
-  yahrtzeit:  {label:'Yahrtzeit',   fn:(r,x)=>(get(r,contactHdr,'yahrtzeit')||'')+(get(r,contactHdr,'yahrtzeit for')?' · '+get(r,contactHdr,'yahrtzeit for'):'')},
+  yahrtzeit:  {label:'Yahrtzeit',   fn:(r,x)=>{const m=get(r,contactHdr,'yahrtzeit month');const d=get(r,contactHdr,'yahrtzeit day of month');const f=get(r,contactHdr,'yahrtzeit for');return(m?(d?d+' '+m:m):'')+(f?' · '+f:'');}},
 };
 
 let qSelectedRows=new Set(); // set of result indices (into lastQueryResults)
