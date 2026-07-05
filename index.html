@@ -79,6 +79,15 @@ select.form-input{cursor:pointer}
 .field-label{font-size:12px;color:var(--gray-500);min-width:110px;flex-shrink:0}
 .field-value{font-size:12px;color:var(--gray-900);text-align:right;word-break:break-word}
 .field-value.money{color:var(--blue);font-weight:600}
+.field-value.inline-editable{cursor:pointer;background:#FFF6D8;border:1px dashed #E0B400;border-radius:4px;padding:2px 6px;transition:background 0.12s}
+.field-value.inline-editable:hover{background:#FFEEB0}
+.field-value.inline-editable.editing{background:none;border:none;padding:0;cursor:default;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.inline-input{font-size:12px;padding:4px 6px;border:1px solid var(--blue);border-radius:4px;max-width:180px}
+.inline-save-btn,.inline-cancel-btn,.inline-remove-btn{border:none;background:var(--gray-100);border-radius:4px;cursor:pointer;font-size:11px;padding:3px 7px;line-height:1}
+.inline-save-btn{background:var(--blue);color:#fff}
+.inline-remove-btn{background:none;color:var(--gray-400);padding:2px 5px}
+.inline-remove-btn:hover{color:#A32D2D}
+.sec-edit-btn.active{background:var(--blue);color:#fff}
 .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:7px 0}
 .stat-box{background:var(--gray-100);border-radius:var(--radius-sm);padding:9px 11px}
 .stat-box .s-label{font-size:10px;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px}
@@ -968,7 +977,7 @@ let ledgerHistory=[];
 let emailCheckboxes={};
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-function hdr(arr){const h={};(arr||[]).forEach((v,i)=>{h[(v||'').trim().toLowerCase()]=i;});return h;}
+function hdr(arr){const h={};(arr||[]).forEach((v,i)=>{const k=(v||'').trim().toLowerCase();if(!(k in h))h[k]=i;});return h;}
 function col(hdrObj,...keys){for(const k of keys){const idx=hdrObj[k.toLowerCase()];if(idx!==undefined)return idx;}return -1;}
 function get(row,hdrObj,...keys){const i=col(hdrObj,...keys);return i>=0?(row[i]||''):'';}
 function normId(v){if(!v)return'';return String(v).trim().replace(/,/g,'').replace(/\.0+$/,'');}
@@ -1354,6 +1363,7 @@ function renderLedger(idx){
   const phone=get(r,contactHdr,'phone');
   const email=get(r,contactHdr,'email');
   const category=get(r,contactHdr,'category');
+  const categoryOverride=get(r,contactHdr,'category override');
   const lifetime=get(r,contactHdr,'lifetime','lifetime giving (if donor 4k+)');
   const pattern=get(r,contactHdr,'giving pattern');
   const action=get(r,contactHdr,'action plan');
@@ -1391,13 +1401,13 @@ function renderLedger(idx){
 
   // Email pool
   const emailPool=[];
-  const addEmail=(e,label)=>{if(e&&!emailPool.find(x=>x.e===e))emailPool.push({e,label});};
-  (email||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,name));
+  const addEmail=(e,label,own)=>{if(e&&!emailPool.find(x=>x.e===e))emailPool.push({e,label,own:!!own});};
+  (email||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,name,true));
   rels.forEach(({relType,otherName,otherId})=>{
     const ci=contactByAcct.get(otherId);
-    if(ci!==undefined){const ce=get(contactRows[ci],contactHdr,'email');(ce||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,`${otherName} (${relType})`));}
+    if(ci!==undefined){const ce=get(contactRows[ci],contactHdr,'email');(ce||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,`${otherName} (${relType})`,false));}
     const sis=studentByAcct.get(otherId)||[];
-    sis.forEach(si=>{const se=get(studentRows[si],studentHdr,'email');(se||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,`${otherName} (${relType})`));});
+    sis.forEach(si=>{const se=get(studentRows[si],studentHdr,'email');(se||'').split(';').map(s=>s.trim()).filter(Boolean).forEach(e=>addEmail(e,`${otherName} (${relType})`,false));});
   });
 
   const dedIdxs=dedByAcct.get(acctId)||[];
@@ -1443,7 +1453,8 @@ function renderLedger(idx){
 
   // Helper for section edit button
   function secEditBtn(section){
-    return`<button class="sec-edit-btn" onclick="openEditSection('${section}')">✏️ Edit</button>`;
+    const on=!!sectionEditMode[section];
+    return`<button class="sec-edit-btn ${on?'active':''}" onclick="toggleSectionEdit('${section}')">${on?'✓ Done':'✏️ Edit'}</button>`;
   }
 
   const html=`
@@ -1460,20 +1471,25 @@ function renderLedger(idx){
 
         <!-- CONTACT INFO -->
         <div class="sec-title"><span>Contact</span>${secEditBtn('contact')}</div>
-        ${phone?phone.split(';').map(p=>`<div class="field-row"><span class="field-label">Phone</span><span class="field-value">${p.trim()}</span></div>`).join(''):''}
-        ${addr?`<div class="field-row"><span class="field-label">Address</span><span class="field-value">${addr}</span></div>`:''}
-        ${faulty?`<div class="field-row"><span class="field-label">⚠️ Faulty</span><span class="field-value" style="color:#A32D2D">${faulty}</span></div>`:''}
-        ${(!phone&&!addr&&!faulty)?`<div style="font-size:12px;color:var(--gray-500)">No contact info on file.</div>`:''}
+        ${fieldRow('Phone','contact','phone',phone,'text')}
+        ${fieldRow('Address','contact','address',addr,'text')}
+        ${fieldRow('⚠️ Faulty','contact','faulty phone or address',faulty,'text')}
+        ${(!phone&&!addr&&!faulty&&!sectionEditMode.contact)?`<div style="font-size:12px;color:var(--gray-500)">No contact info on file.</div>`:''}
 
         <!-- EMAIL -->
-        ${emailPool.length?`
-        <div class="sec-title"><span>Email</span></div>
-        ${emailPool.map(({e,label})=>`
+        ${emailPool.length||sectionEditMode.email?`
+        <div class="sec-title"><span>Email</span>${secEditBtn('email')}</div>
+        ${emailPool.map(({e,label,own})=>`
           <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-200);cursor:pointer">
             <input type="checkbox" class="rel-check" id="ec-${e.replace(/[^a-z0-9]/gi,'_')}" onchange="toggleEmailCheck('${e.replace(/'/g,"\\'")}',this.checked)" />
             <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${e}</div><div style="font-size:11px;color:var(--gray-500)">${label}</div></div>
+            ${(sectionEditMode.email&&own)?`<button class="inline-remove-btn" onclick="event.preventDefault();event.stopPropagation();removeOwnEmail('${e.replace(/'/g,"\\'")}')" title="Remove this email">✕</button>`:''}
           </label>`).join('')}
-        <div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="openEmailPanel()">✉️ Email selected</button></div>`:''}
+        ${sectionEditMode.email?`<div style="display:flex;gap:6px;margin-top:8px">
+          <input class="form-input" id="add-email-input" placeholder="Add email address…" style="flex:1" />
+          <button class="btn btn-sm" onclick="addOwnEmail()">+ Add</button>
+        </div>`:''}
+        ${emailPool.length?`<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="openEmailPanel()">✉️ Email selected</button></div>`:''}`:''}
 
         <!-- RELATIONSHIPS -->
         <div class="sec-title"><span>Relationships</span></div>
@@ -1501,10 +1517,16 @@ function renderLedger(idx){
         </div>
         ${donFutAmt?`<div class="field-row"><span class="field-label">Future Pledge</span><span class="field-value money">${donFutAmt}${donFutYrs?' <span style="font-size:11px;font-weight:400;color:var(--gray-500)">('+donFutYrs+')</span>':''}</span></div>`:''}
         ${totalCommit||get(doRow||[],donOvHdr,'total commitment')?`<div class="field-row"><span class="field-label">Total Commitment</span><span class="field-value money">${fmt$(totalCommit||get(doRow||[],donOvHdr,'total commitment'))}</span></div>`:''}
-        ${action?`<div class="field-row"><span class="field-label">Action Plan</span><span class="field-value">${action}</span></div>`:''}
-        ${allActionMonthsDisplay?`<div class="field-row"><span class="field-label">Action Months</span><span class="field-value">${allActionMonthsDisplay}${actionYear?' '+actionYear:''}${yahrMonth?` <span style="font-size:11px;font-weight:400;color:var(--gray-500)">(incl. ${yahrMonth}${yahrDay?' '+yahrDay:''} yahrtzeit)</span>`:''}</span></div>`:''}
-        ${notes?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes}</span></div>`:''}
-        ${(yahrFor||yahr)?`<div class="field-row"><span class="field-label">Yahrtzeit</span><span class="field-value">${yahr}${yahrFor?' · '+yahrFor:''}</span></div>`:''}
+        <div style="font-size:10px;color:var(--gray-400);margin:2px 0 6px">Lifetime, Future Pledge, and Total Commitment are auto-calculated nightly from Donations_Detail — not directly editable here.</div>
+        ${fieldRow('Category Override','giving','category override',categoryOverride,'text')}
+        ${fieldRow('Action Plan','giving','action plan',action,'textarea')}
+        ${fieldRow('Action Month','giving','action month',actionMonth?(FULL_MONTHS[parseInt(actionMonth,10)]||actionMonth):'','action-month')}
+        ${fieldRow('Action Year','giving','action year',actionYear,'action-year')}
+        ${allActionMonthsDisplay?`<div class="field-row"><span class="field-label">All Action Months</span><span class="field-value" style="font-size:11px">${allActionMonthsDisplay}${yahrMonth?` (incl. ${yahrMonth}${yahrDay?' '+yahrDay:''} yahrtzeit)`:''}</span></div>`:''}
+        ${fieldRow('Notes','giving','notes',notes,'textarea')}
+        ${fieldRow('Yahrtzeit For','giving','yahrtzeit for',yahrFor,'text')}
+        ${fieldRow('Yahrtzeit Month','giving','yahrtzeit month',yahrMonth,'yahrtzeit-month')}
+        ${fieldRow('Yahrtzeit Day of Month','giving','yahrtzeit day of month',yahrDay,'text')}
 
         <!-- YEAR GRID -->
         ${hasAnyYear?`<div class="sec-title"><span>Year by Year (non-zero only)</span></div><div class="giving-grid">${yrCells}</div>`:''}
@@ -1556,7 +1578,7 @@ function renderLedger(idx){
         <div id="tui-det" class="expand-section"><div id="tui-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div></div>
 
         <!-- DEDICATIONS -->
-        <div class="sec-title"><span>Dedications</span></div>
+        <div class="sec-title"><span>Dedications</span>${secEditBtn('dedications')}</div>
         ${dedIdxs.length?dedIdxs.map(di=>{
           const dr=dedRows[di];
           const item=get(dr,dedHdr,'dedication item');
@@ -1565,8 +1587,11 @@ function renderLedger(idx){
           const notes2=get(dr,dedHdr,'notes');
           const flags=get(dr,dedHdr,'flags');
           const hasTxt=!!(text||'').trim();
+          const itemCell=sectionEditMode.dedications
+            ?`<select class="inline-input" onchange="saveDedicationItem(this,${di})">${dedicationItemOptionsList().map(o=>`<option value="${escapeHtml(o)}" ${o===item?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select> <button class="inline-remove-btn" title="Delete this dedication" onclick="deleteDedicationRow(${di})">🗑</button>`
+            :(item||'—');
           return`<div style="background:var(--gray-100);border-left:3px solid var(--navy);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px">
-            <div class="field-row"><span class="field-label">Item</span><span class="field-value">${item||'—'}</span></div>
+            <div class="field-row"><span class="field-label">Item</span><span class="field-value">${itemCell}</span></div>
             <div class="field-row"><span class="field-label">Status</span><span class="field-value">${status||'—'}</span></div>
             <div class="field-row"><span class="field-label">Ded. Text</span><span class="field-value"><span class="ded-check ${hasTxt?'yes':'no'}">${hasTxt?'✓ Yes':'✗ No'}</span></span></div>
             ${notes2?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes2}</span></div>`:''}
@@ -1683,6 +1708,213 @@ async function saveEdit(){
     showMsg('edit-msg','✓ Saved to sheet!','success');
     renderLedger(editContactIdx);
   }catch(e){showMsg('edit-msg','Network error: '+e.message,'error');}
+}
+
+// ─── GENERIC SHEET WRITE/DELETE HELPERS ────────────────────────────────────────
+// ci is a 0-based column index (matches colToLetter's own convention).
+async function writeSheetCell(tabName, sheetRowNumber, ci, newVal){
+  if(ci<0) throw new Error('Column not found in sheet.');
+  const range=`${encodeURIComponent(tabName)}!${colToLetter(ci)}${sheetRowNumber}`;
+  const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newVal]]})});
+  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+}
+
+let sheetGidCache={};
+async function getSheetGid(tabName){
+  if(sheetGidCache[tabName]!==undefined) return sheetGidCache[tabName];
+  const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}?fields=sheets.properties`);
+  const data=await res.json();
+  (data.sheets||[]).forEach(s=>{sheetGidCache[s.properties.title]=s.properties.sheetId;});
+  return sheetGidCache[tabName];
+}
+
+async function deleteSheetRow(tabName, sheetRowNumber){
+  const gid=await getSheetGid(tabName);
+  if(gid===undefined) throw new Error('Could not find tab: '+tabName);
+  const body={requests:[{deleteDimension:{range:{sheetId:gid,dimension:'ROWS',startIndex:sheetRowNumber-1,endIndex:sheetRowNumber}}}]};
+  const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}:batchUpdate`,
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+}
+
+// ─── SILENT BACKGROUND REFRESH (auto-refresh after every edit) ────────────────
+// Re-pulls every tab without resetting navigation or kicking the user back to
+// search — re-renders whatever ledger is currently open with fresh data.
+async function silentRefreshData(){
+  if(isDemo) return;
+  try{
+    const tabs=[TAB.CONTACTS,TAB.STUDENTS,TAB.DEDICATIONS,TAB.RELATIONSHIPS,TAB.DON_OVERVIEW,TAB.TUI_OVERVIEW];
+    const qs=tabs.map(t=>`ranges=${encodeURIComponent(t)}`).join('&');
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchGet?${qs}`;
+    const res=await authedFetch(url);
+    const data=await res.json();
+    if(!res.ok) return;
+    const vr=data.valueRanges||[];
+    const cv=vr[0]?.values||[];
+    if(cv.length>=2){contactHdr=hdr(cv[0]);contactRows=cv.slice(1).filter(r=>(r[col(contactHdr,'name')]||'').trim());}
+    const sv=vr[1]?.values||[];
+    if(sv.length>=2){studentHdr=hdr(sv[0]);studentRows=sv.slice(1).filter(r=>(r[col(studentHdr,'name')]||'').trim());}
+    const dv=vr[2]?.values||[];
+    if(dv.length>=2){dedHdr=hdr(dv[0]);dedRows=dv.slice(1).filter(r=>(r[col(dedHdr,'account id')]||'').toString().trim());}
+    const rv=vr[3]?.values||[];
+    if(rv.length>=2){relHdr=hdr(rv[0]);relRows=rv.slice(1);}
+    const dov=vr[4]?.values||[];
+    if(dov.length>=2){donOvHdr=hdr(dov[0]);donOvRows=dov.slice(1).filter(r=>(r[col(donOvHdr,'accountid')]||'').toString().trim());}
+    const tov=vr[5]?.values||[];
+    if(tov.length>=2){tuiOvHdr=hdr(tov[0]);tuiOvRows=tov.slice(1).filter(r=>(r[col(tuiOvHdr,'accountid')]||'').toString().trim());}
+    buildIndexes();
+    const badge=document.getElementById('topbar-badge');
+    if(badge) badge.textContent=(signedInEmail||'Live')+' · '+contactRows.length+' contacts';
+    if(currentAcctId && document.getElementById('ledger-section').style.display!=='none'){
+      const idx=contactByAcct.get(currentAcctId);
+      if(idx!==undefined){currentContactIdx=idx;renderLedger(idx);}
+    }
+  }catch(e){console.warn('Silent refresh failed:',e);}
+}
+
+// ─── INLINE CLICK-TO-EDIT ──────────────────────────────────────────────────────
+// Pressing a section's ✏️ Edit button highlights every editable field in that
+// section. Clicking a highlighted field turns it into an input right there —
+// no separate "choose a field" step, no bottom panel.
+let sectionEditMode={};
+function toggleSectionEdit(section){
+  sectionEditMode[section]=!sectionEditMode[section];
+  renderLedger(currentContactIdx);
+}
+const FULL_MONTHS=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+function escapeHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function startInlineEdit(el){
+  if(el.classList.contains('editing'))return;
+  const field=el.dataset.field;
+  const type=el.dataset.type||'text';
+  const idx=currentContactIdx;
+  const cur=get(contactRows[idx],contactHdr,field)||'';
+  el.dataset.prevHtml=el.innerHTML;
+  let inputHtml;
+  if(type==='action-month'){
+    inputHtml=`<select class="inline-input" id="inline-input"><option value="">— none —</option><option value="All Months" ${cur==='All Months'?'selected':''}>🔁 All Months</option>${FULL_MONTHS.slice(1).map((m,i)=>`<option value="${i+1}" ${String(i+1)===cur?'selected':''}>${i+1} – ${m}</option>`).join('')}</select>`;
+  }else if(type==='action-year'){
+    inputHtml=`<select class="inline-input" id="inline-input"><option value="">— none —</option><option value="All Years" ${cur==='All Years'?'selected':''}>All Years</option>${Array.from({length:10},(_,i)=>2026+i).map(y=>`<option value="${y}" ${String(y)===cur?'selected':''}>${y}</option>`).join('')}</select>`;
+  }else if(type==='yahrtzeit-month'){
+    inputHtml=`<select class="inline-input" id="inline-input"><option value="">— none —</option>${Object.keys(HEBREW_MONTH_TO_GREGORIAN).map(m=>`<option value="${m}" ${m===cur?'selected':''}>${m}</option>`).join('')}</select>`;
+  }else if(type==='textarea'){
+    inputHtml=`<textarea class="inline-input" id="inline-input" rows="2">${escapeHtml(cur)}</textarea>`;
+  }else{
+    inputHtml=`<input class="inline-input" id="inline-input" type="text" value="${escapeHtml(cur)}" />`;
+  }
+  el.classList.add('editing');
+  el.innerHTML=`${inputHtml}<button class="inline-save-btn" onclick="event.stopPropagation();saveInlineEdit(this)">✓</button><button class="inline-cancel-btn" onclick="event.stopPropagation();cancelInlineEdit(this)">✕</button>`;
+  const inputEl=document.getElementById('inline-input');
+  if(inputEl){
+    inputEl.focus();
+    inputEl.addEventListener('keydown',e=>{
+      if(e.key==='Enter'&&type!=='textarea'){e.preventDefault();saveInlineEdit(el.querySelector('.inline-save-btn'));}
+      if(e.key==='Escape'){cancelInlineEdit(el.querySelector('.inline-cancel-btn'));}
+    });
+  }
+}
+
+function cancelInlineEdit(btn){
+  const wrap=btn.closest('.inline-editable');
+  wrap.innerHTML=wrap.dataset.prevHtml;
+  wrap.classList.remove('editing');
+}
+
+async function saveInlineEdit(btn){
+  const wrap=btn.closest('.inline-editable');
+  const field=wrap.dataset.field;
+  const inputEl=wrap.querySelector('.inline-input');
+  const newVal=inputEl.value;
+  const idx=currentContactIdx;
+  const ci=col(contactHdr,field);
+  if(ci<0){alert('Column not found in sheet: '+field);return;}
+  wrap.innerHTML='Saving…';
+  try{
+    if(!isDemo) await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
+    contactRows[idx][ci]=newVal;
+    await silentRefreshData();
+  }catch(e){
+    alert('Save failed: '+e.message);
+    renderLedger(idx);
+  }
+}
+
+// Renders one field as either plain text (view mode) or a click-to-edit span
+// (when the section is in edit mode). Auto-computed fields should pass
+// editable=false so they render as plain text even in edit mode.
+function fieldRow(label, section, fieldKey, displayVal, fieldType, editable){
+  const editing=!!sectionEditMode[section]&&editable!==false;
+  if(!editing){
+    if(!displayVal) return '';
+    return `<div class="field-row"><span class="field-label">${label}</span><span class="field-value">${displayVal}</span></div>`;
+  }
+  const shown=displayVal||'<span style="color:var(--gray-400)">— click to add —</span>';
+  return `<div class="field-row"><span class="field-label">${label}</span><span class="field-value inline-editable" data-field="${fieldKey}" data-type="${fieldType||'text'}" onclick="startInlineEdit(this)">${shown}</span></div>`;
+}
+
+// ─── DEDICATIONS: inline item edit + delete ────────────────────────────────────
+function dedicationItemOptionsList(){
+  const set=new Set();
+  dedRows.forEach(dr=>{const v=get(dr,dedHdr,'dedication item');if(v)set.add(v);});
+  return Array.from(set).sort();
+}
+
+async function saveDedicationItem(selectEl, di){
+  const newVal=selectEl.value;
+  const ci=col(dedHdr,'dedication item');
+  selectEl.disabled=true;
+  try{
+    if(!isDemo) await writeSheetCell(TAB.DEDICATIONS, di+2, ci, newVal);
+    dedRows[di][ci]=newVal;
+    await silentRefreshData();
+  }catch(e){alert('Save failed: '+e.message);renderLedger(currentContactIdx);}
+}
+
+async function deleteDedicationRow(di){
+  if(!confirm('Delete this dedication? This cannot be undone.'))return;
+  try{
+    if(!isDemo){
+      await deleteSheetRow(TAB.DEDICATIONS, di+2);
+    }else{
+      dedRows.splice(di,1);
+    }
+    await silentRefreshData();
+  }catch(e){alert('Delete failed: '+e.message);}
+}
+
+// ─── EMAIL: additive edit (add/remove), never a blind overwrite ───────────────
+async function addOwnEmail(){
+  const input=document.getElementById('add-email-input');
+  const newEmail=(input.value||'').trim();
+  if(!newEmail)return;
+  const idx=currentContactIdx;
+  const ci=col(contactHdr,'email');
+  const existing=(get(contactRows[idx],contactHdr,'email')||'').split(';').map(s=>s.trim()).filter(Boolean);
+  if(existing.map(e=>e.toLowerCase()).includes(newEmail.toLowerCase())){alert('That email is already on file.');return;}
+  existing.push(newEmail);
+  const newVal=existing.join('; ');
+  input.disabled=true;
+  try{
+    if(!isDemo) await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
+    contactRows[idx][ci]=newVal;
+    await silentRefreshData();
+  }catch(e){alert('Save failed: '+e.message);renderLedger(idx);}
+}
+
+async function removeOwnEmail(emailToRemove){
+  if(!confirm('Remove '+emailToRemove+' from this contact?'))return;
+  const idx=currentContactIdx;
+  const ci=col(contactHdr,'email');
+  const existing=(get(contactRows[idx],contactHdr,'email')||'').split(';').map(s=>s.trim()).filter(Boolean);
+  const updated=existing.filter(e=>e!==emailToRemove);
+  const newVal=updated.join('; ');
+  try{
+    if(!isDemo) await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
+    contactRows[idx][ci]=newVal;
+    await silentRefreshData();
+  }catch(e){alert('Save failed: '+e.message);renderLedger(idx);}
 }
 
 // ─── EMAIL ────────────────────────────────────────────────────────────────────
@@ -2959,9 +3191,9 @@ function loadDemo(){
   isDemo=true;
   contactHdr=hdr(['AccountID','Name','Category','Address','Phone','Email','Lifetime Giving (if Donor 4k+)','Parent Of','Raw Association Tags','Data Source','Giving Category','Giving Pattern','Action Plan','Action Date','Notes','Future Pledge Yrs','Future Pledge Amt','Total Commitment','Faulty Phone or Address','Yahrtzeit For','Yahrtzeit']);
   contactRows=[
-    ['9921','ADLER, Jonathan and Leah','Donor (4k+)','388 Maitland Avenue, Teaneck, NJ 07666','(917) 697-9369','leahadler1@yahoo.com','$46,500','','','Donor Master','ACTIVE_LOYAL','Gave 13 years','Call re: dedication','July 2026','Strong supporter. Interested in naming.','2027, 2028','$5,000','$51,500','','',''],
-    ['8607','BERMAN, Ann','Donor (4k+)','3212 Northbrook Road, Baltimore, MD 21208','(410) 258-3630','savtaberman@gmail.com','$26,420','','','Donor Master','ACTIVE_CONSISTENT','Gave 15 years','','','','','0','$26,420','','',''],
-    ['3243','BERMAN, Ben and Elizabeth','Donor (4k+); Student/Alumni','4333 North Jefferson Avenue, Miami Beach, FL 33140','(301) 512-4069','benberman@bermanenterprises.com','$169,264','','','Donor Master','ACTIVE_LOYAL','Gave 16 years','Get dedication text!','','and what else?','','0','$169,264','','',''],
+    ['9921','ADLER, Jonathan and Leah','Donor 25k-99.9k','388 Maitland Avenue, Teaneck, NJ 07666','(917) 697-9369','leahadler1@yahoo.com','$46,500','','','Donor Master','ACTIVE_LOYAL','Gave 13 years','Call re: dedication','July 2026','Strong supporter. Interested in naming.','2027, 2028','$5,000','$51,500','','',''],
+    ['8607','BERMAN, Ann','Donor 25k-99.9k','3212 Northbrook Road, Baltimore, MD 21208','(410) 258-3630','savtaberman@gmail.com','$26,420','','','Donor Master','ACTIVE_CONSISTENT','Gave 15 years','','','','','0','$26,420','','',''],
+    ['3243','BERMAN, Ben and Elizabeth','Donor Above 100k; Student','4333 North Jefferson Avenue, Miami Beach, FL 33140','(301) 512-4069','benberman@bermanenterprises.com','$169,264','','','Donor Master','ACTIVE_LOYAL','Gave 16 years','Get dedication text!','','and what else?','','0','$169,264','','',''],
   ];
   donOvHdr=hdr(['AccountID','Name','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026','Lifetime Giving','First Gift Year','Last Gift Year','Years Given','Largest Gift','Largest Gift Year','Last Gift Amount','Giving Category','Giving Pattern','Future Pledge Yrs','Future Pledge Amt']);
   donOvRows=[
