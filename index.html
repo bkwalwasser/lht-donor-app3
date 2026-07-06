@@ -1588,12 +1588,18 @@ function renderLedger(idx){
           const flags=get(dr,dedHdr,'flags');
           const hasTxt=!!(text||'').trim();
           const itemCell=sectionEditMode.dedications
-            ?`<select class="inline-input" onchange="saveDedicationItem(this,${di})">${dedicationItemOptionsList().map(o=>`<option value="${escapeHtml(o)}" ${o===item?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select> <button class="inline-remove-btn" title="Delete this dedication" onclick="deleteDedicationRow(${di})">🗑</button>`
+            ?`<select class="inline-input" onchange="saveDedicationField(this,${di},'dedication item')">${dedicationItemOptionsList().map(o=>`<option value="${escapeHtml(o)}" ${o===item?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select> <button class="inline-remove-btn" title="Delete this dedication" onclick="deleteDedicationRow(${di})">🗑</button>`
             :(item||'—');
+          const statusCell=sectionEditMode.dedications
+            ?`<select class="inline-input" onchange="saveDedicationField(this,${di},'status')"><option value="">— none —</option>${['Hung','Not Hung','In Progress','Ordered'].map(o=>`<option value="${o}" ${o===status?'selected':''}>${o}</option>`).join('')}</select>`
+            :(status||'—');
+          const textCell=sectionEditMode.dedications
+            ?`<textarea class="inline-input" rows="2" style="width:100%;max-width:none" onblur="saveDedicationField(this,${di},'dedication text')">${escapeHtml(text)}</textarea>`
+            :`<span class="ded-check ${hasTxt?'yes':'no'}">${hasTxt?'✓ Yes':'✗ No'}</span>`;
           return`<div style="background:var(--gray-100);border-left:3px solid var(--navy);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px">
             <div class="field-row"><span class="field-label">Item</span><span class="field-value">${itemCell}</span></div>
-            <div class="field-row"><span class="field-label">Status</span><span class="field-value">${status||'—'}</span></div>
-            <div class="field-row"><span class="field-label">Ded. Text</span><span class="field-value"><span class="ded-check ${hasTxt?'yes':'no'}">${hasTxt?'✓ Yes':'✗ No'}</span></span></div>
+            <div class="field-row"><span class="field-label">Status</span><span class="field-value">${statusCell}</span></div>
+            <div class="field-row"><span class="field-label">Ded. Text</span><span class="field-value">${textCell}</span></div>
             ${notes2?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes2}</span></div>`:''}
             ${flags?`<div class="field-row"><span class="field-label">Flags</span><span class="field-value" style="font-size:11px">${flags}</span></div>`:''}
           </div>`;}).join(''):'<div style="font-size:12px;color:var(--gray-500)">No dedications on file.</div>'}
@@ -1861,10 +1867,11 @@ function dedicationItemOptionsList(){
   return Array.from(set).sort();
 }
 
-async function saveDedicationItem(selectEl, di){
-  const newVal=selectEl.value;
-  const ci=col(dedHdr,'dedication item');
-  selectEl.disabled=true;
+async function saveDedicationField(el, di, fieldKey){
+  const newVal=el.value;
+  const ci=col(dedHdr,fieldKey);
+  if(ci<0){alert('Column not found: '+fieldKey);return;}
+  el.disabled=true;
   try{
     if(!isDemo) await writeSheetCell(TAB.DEDICATIONS, di+2, ci, newVal);
     dedRows[di][ci]=newVal;
