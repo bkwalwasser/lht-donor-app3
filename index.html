@@ -740,8 +740,12 @@ select.form-input{cursor:pointer}
         <select class="form-input" id="bds-new-status">
           <option value="Hung">Hung</option>
           <option value="Not Hung">Not Hung</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Ordered">Ordered</option>
+          <option value="Needs Conversation">Needs Conversation</option>
+          <option value="Text Pending">Text Pending</option>
+          <option value="Declined">Declined</option>
+          <option value="Not Relevant">Not Relevant</option>
+          <option value="Fix">Fix</option>
+          <option value="Remove">Remove</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="loadDedList()">Load</button>
       </div>
@@ -1572,7 +1576,7 @@ function renderLedger(idx){
             ?`<select class="inline-input" onchange="saveDedicationField(this,${di},'dedication item')">${dedicationItemOptionsList().map(o=>`<option value="${escapeHtml(o)}" ${o===item?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select> <button class="inline-remove-btn" title="Delete this dedication" onclick="deleteDedicationRow(${di})">🗑</button>`
             :(item||'—');
           const statusCell=sectionEditMode.dedications
-            ?`<select class="inline-input" onchange="saveDedicationField(this,${di},'status')"><option value="">— none —</option>${['Hung','Not Hung','In Progress','Ordered'].map(o=>`<option value="${o}" ${o===status?'selected':''}>${o}</option>`).join('')}</select>`
+            ?`<select class="inline-input" onchange="saveDedicationField(this,${di},'status')"><option value="">— none —</option>${DEDICATION_STATUS_OPTIONS.map(o=>`<option value="${o}" ${o===status?'selected':''}>${o}</option>`).join('')}</select>`
             :(status||'—');
           const textCell=sectionEditMode.dedications
             ?`<textarea class="inline-input" rows="2" style="width:100%;max-width:none" onblur="saveDedicationField(this,${di},'dedication text')">${escapeHtml(text)}</textarea>`
@@ -1584,6 +1588,19 @@ function renderLedger(idx){
             ${notes2?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes2}</span></div>`:''}
             ${flags?`<div class="field-row"><span class="field-label">Flags</span><span class="field-value" style="font-size:11px">${flags}</span></div>`:''}
           </div>`;}).join(''):'<div style="font-size:12px;color:var(--gray-500)">No dedications on file.</div>'}
+        ${sectionEditMode.dedications?`
+        <div style="border:1px dashed var(--gray-300);border-radius:var(--radius-sm);padding:10px 12px;margin-top:6px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px">+ Add a new dedication</div>
+          <input class="form-input" id="add-ded-item" list="ded-item-list" placeholder="Dedication item (e.g. Sefer Torah, Amud, Bench…)" style="margin-bottom:6px" />
+          <datalist id="ded-item-list">${dedicationItemOptionsList().map(o=>`<option value="${escapeHtml(o)}">`).join('')}</datalist>
+          <select class="form-input" id="add-ded-status" style="margin-bottom:6px">
+            <option value="">— status —</option>
+            ${DEDICATION_STATUS_OPTIONS.map(o=>`<option value="${o}">${o}</option>`).join('')}
+          </select>
+          <textarea class="form-textarea" id="add-ded-text" rows="2" placeholder="Dedication text (plaque wording, if known)" style="margin-bottom:6px"></textarea>
+          <input class="form-input" id="add-ded-notes" placeholder="Notes (optional)" style="margin-bottom:6px" />
+          <button class="btn btn-primary btn-sm" id="add-ded-save-btn" onclick="appendDedicationRow()">Save new dedication</button>
+        </div>`:''}
 
       </div>
     </div>`;
@@ -1770,6 +1787,8 @@ function toggleSectionEdit(section){
   renderLedger(currentContactIdx);
 }
 const FULL_MONTHS=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+// The actual statuses in use across the Dedications sheet — not a guess.
+const DEDICATION_STATUS_OPTIONS=['Hung','Not Hung','Needs Conversation','Text Pending','Declined','Not Relevant','Fix','Remove'];
 function escapeHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function startInlineEdit(el){
@@ -1870,6 +1889,51 @@ async function deleteDedicationRow(di){
     }
     await silentRefreshData();
   }catch(e){alert('Delete failed: '+e.message);}
+}
+
+// Adds a brand-new dedication row for a contact who doesn't have one yet
+// (or wants an additional one) — not just editing existing rows.
+async function appendDedicationRow(){
+  const item=(document.getElementById('add-ded-item').value||'').trim();
+  const status=document.getElementById('add-ded-status').value;
+  const text=(document.getElementById('add-ded-text').value||'').trim();
+  const notes=(document.getElementById('add-ded-notes').value||'').trim();
+  if(!item&&!status&&!text){alert('Enter at least a dedication item, status, or text.');return;}
+
+  const idx=currentContactIdx;
+  const r=contactRows[idx];
+  const acctId=get(r,contactHdr,'accountid');
+  const name=get(r,contactHdr,'name');
+  const totalCommit=get(r,contactHdr,'total commitment');
+
+  const maxIdx=Math.max(...Object.values(dedHdr));
+  const row=new Array(maxIdx+1).fill('');
+  const setIf=(key,val)=>{const i=dedHdr[key];if(i!==undefined)row[i]=val;};
+  setIf('account id',acctId);
+  setIf('donor name',name);
+  setIf('total commitment',totalCommit);
+  setIf('dedication item',item);
+  setIf('notes',notes);
+  setIf('status',status);
+  setIf('dedication text',text);
+
+  const btn=document.getElementById('add-ded-save-btn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    if(!isDemo){
+      const res=await authedFetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.DEDICATIONS)}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[row]})}
+      );
+      if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+    }else{
+      dedRows.push(row);
+    }
+    await silentRefreshData();
+  }catch(e){
+    alert('Save failed: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='Save new dedication';}
+  }
 }
 
 // ─── EMAIL: additive edit (add/remove), never a blind overwrite ───────────────
@@ -2538,7 +2602,7 @@ function onGroupFieldChange(fkey){
     valEl.style.display='block';valEl.placeholder='Type solicitor name…';selEl.style.display='none';
   } else if(ef.type==='dedstatus'){
     valEl.style.display='none';selEl.style.display='block';
-    selEl.innerHTML='<option value="">— choose —</option>'+['Hung','Not Hung','In Progress','Ordered'].map(s=>`<option value="${s}">${s}</option>`).join('');
+    selEl.innerHTML='<option value="">— choose —</option>'+DEDICATION_STATUS_OPTIONS.map(s=>`<option value="${s}">${s}</option>`).join('');
   }
 }
 
