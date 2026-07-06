@@ -1761,8 +1761,17 @@ async function deleteSheetRow(tabName, sheetRowNumber){
 }
 
 // ─── SILENT BACKGROUND REFRESH (auto-refresh after every edit) ────────────────
-// Re-pulls every tab without resetting navigation or kicking the user back to
-// search — re-renders whatever ledger is currently open with fresh data.
+// IMPORTANT: this is never called immediately after a write. Google Sheets'
+// API can have a short propagation delay — reading back right after writing
+// can return the pre-write data and stomp the very edit that was just made.
+// Instead, each save re-renders from local state immediately (instant,
+// always correct), then schedules this for a bit later to reconcile with
+// anything else that changed server-side (the nightly script, etc).
+let bgRefreshTimer=null;
+function scheduleBackgroundRefresh(){
+  if(bgRefreshTimer) clearTimeout(bgRefreshTimer);
+  bgRefreshTimer=setTimeout(()=>{ bgRefreshTimer=null; silentRefreshData(); }, 4000);
+}
 async function silentRefreshData(){
   if(isDemo) return;
   try{
@@ -1863,7 +1872,8 @@ async function saveInlineEdit(btn){
   try{
     if(!isDemo) await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
     contactRows[idx][ci]=newVal;
-    await silentRefreshData();
+    renderLedger(idx);
+    scheduleBackgroundRefresh();
   }catch(e){
     alert('Save failed: '+e.message);
     renderLedger(idx);
@@ -1898,7 +1908,8 @@ async function saveDedicationField(el, di, fieldKey){
   try{
     if(!isDemo) await writeSheetCell(TAB.DEDICATIONS, di+2, ci, newVal);
     dedRows[di][ci]=newVal;
-    await silentRefreshData();
+    renderLedger(currentContactIdx);
+    scheduleBackgroundRefresh();
   }catch(e){alert('Save failed: '+e.message);renderLedger(currentContactIdx);}
 }
 
@@ -1910,7 +1921,8 @@ async function deleteDedicationRow(di){
     }else{
       dedRows.splice(di,1);
     }
-    await silentRefreshData();
+    renderLedger(currentContactIdx);
+    scheduleBackgroundRefresh();
   }catch(e){alert('Delete failed: '+e.message);}
 }
 
@@ -1953,7 +1965,8 @@ async function appendDedicationRow(){
       dedRows.push(row);
     }
     dedAddFormOpen=false;
-    await silentRefreshData();
+    renderLedger(currentContactIdx);
+    scheduleBackgroundRefresh();
   }catch(e){
     alert('Save failed: '+e.message);
     if(btn){btn.disabled=false;btn.textContent='Save new dedication';}
@@ -1975,7 +1988,8 @@ async function addOwnEmail(){
   try{
     if(!isDemo) await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
     contactRows[idx][ci]=newVal;
-    await silentRefreshData();
+    renderLedger(idx);
+    scheduleBackgroundRefresh();
   }catch(e){alert('Save failed: '+e.message);renderLedger(idx);}
 }
 
@@ -1989,7 +2003,8 @@ async function removeOwnEmail(emailToRemove){
   try{
     if(!isDemo) await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
     contactRows[idx][ci]=newVal;
-    await silentRefreshData();
+    renderLedger(idx);
+    scheduleBackgroundRefresh();
   }catch(e){alert('Save failed: '+e.message);renderLedger(idx);}
 }
 
