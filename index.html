@@ -877,7 +877,7 @@ select.form-input{cursor:pointer}
       <div class="section-head">📊 Campaign / Item Report</div>
       <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Totals for a specific fund or campaign (the "Applied To" field) within a date range. Rows with a blank Applied To are broken out separately rather than silently excluded, so the report still reconciles against the full total for the range.</p>
       <label class="form-label" style="margin-top:0">Applied To</label>
-      <select class="form-input" id="camp-applied-to"><option value="">— choose campaign / fund —</option></select>
+      <select class="form-input" id="camp-applied-to" onfocus="prepareCampaignDropdown()"><option value="">— choose campaign / fund —</option></select>
       <div style="display:flex;gap:10px;margin-top:10px">
         <div style="flex:1">
           <label class="form-label">From date</label>
@@ -1146,7 +1146,17 @@ function showTab(name){
   document.getElementById('ledger-section').style.display='none';
   const ps=document.getElementById('persistent-search');if(ps)ps.style.display='none';
   if(name==='queries'&&contactRows.length){ initLocationUI(); initYearDropdown(); }
-  if(name==='reports'&&donDetRows.length){ initCampaignDropdown(); loadBonusList(); }
+  if(name==='reports'){ resetReportsPanels(); }
+}
+
+// Reports no longer auto-computes anything on tab open — only on explicit
+// button press. This guarantees switching to the tab itself can never hang,
+// no matter how large Donations_Detail/Tuition_Detail get.
+function resetReportsPanels(){
+  const bc=document.getElementById('bonus-count'); if(bc) bc.textContent='';
+  const bl=document.getElementById('bonus-list'); if(bl) bl.innerHTML='<div style="padding:12px;font-size:12px;color:var(--gray-500)">Press "Run" to load bonus tracking data.</div>';
+  const cs=document.getElementById('camp-summary'); if(cs) cs.innerHTML='';
+  const cl=document.getElementById('camp-list'); if(cl) cl.innerHTML='';
 }
 
 
@@ -3084,9 +3094,13 @@ function bonusRowMatches(status,filterVal){
     default: return true;
   }
 }
-function loadBonusList(){
-  const sCol=bonusStatusCol(), stCol=bonusStaffCol();
+async function loadBonusList(){
   const list=document.getElementById('bonus-list');
+  if(!donDetRows.length){
+    list.innerHTML='<div style="padding:12px;font-size:12px;color:var(--gray-500)">⏳ Loading donation history…</div>';
+    await ensureDetailLoaded();
+  }
+  const sCol=bonusStatusCol(), stCol=bonusStaffCol();
   if(sCol<0){
     list.innerHTML='<div style="padding:12px;font-size:12px;color:#A32D2D">Couldn\'t find a "Bonus Status" column in Donations_Detail. Check the exact header text and update bonusStatusCol() in the code if needed.</div>';
     document.getElementById('bonus-count').textContent='';
@@ -3172,13 +3186,22 @@ function initCampaignDropdown(){
   [...vals].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
   sel.dataset.loaded='1';
 }
+async function prepareCampaignDropdown(){
+  if(!donDetRows.length) await ensureDetailLoaded();
+  initCampaignDropdown();
+}
 function parseRowDate(s){
   if(!s)return null;
   const d=new Date(s);
   return isNaN(d.getTime())?null:d;
 }
 let lastCampaignRows=[];
-function runCampaignReport(){
+async function runCampaignReport(){
+  if(!donDetRows.length){
+    document.getElementById('camp-summary').innerHTML='<div style="font-size:12px;color:var(--gray-500)">⏳ Loading donation history…</div>';
+    await ensureDetailLoaded();
+  }
+  initCampaignDropdown();
   const applied=document.getElementById('camp-applied-to').value;
   const fromVal=document.getElementById('camp-date-from').value;
   const toVal=document.getElementById('camp-date-to').value;
