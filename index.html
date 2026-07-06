@@ -1918,9 +1918,15 @@ async function deleteDedicationRow(di){
   try{
     if(!isDemo){
       await deleteSheetRow(TAB.DEDICATIONS, di+2);
-    }else{
-      dedRows.splice(di,1);
     }
+    // Always splice locally too, immediately — every other rendered
+    // dedication row for every OTHER contact has its row-position baked
+    // into its own Save/Delete button already. If we don't shift the local
+    // array right now, those stale positions will silently write to the
+    // wrong row the next time any of them are used, since the real sheet
+    // already shifted but the in-memory copy didn't.
+    dedRows.splice(di,1);
+    buildIndexes();
     renderLedger(currentContactIdx);
     scheduleBackgroundRefresh();
   }catch(e){alert('Delete failed: '+e.message);}
@@ -1961,9 +1967,9 @@ async function appendDedicationRow(){
         {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[row]})}
       );
       if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
-    }else{
-      dedRows.push(row);
     }
+    dedRows.push(row);
+    buildIndexes();
     dedAddFormOpen=false;
     renderLedger(currentContactIdx);
     scheduleBackgroundRefresh();
