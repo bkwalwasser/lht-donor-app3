@@ -734,6 +734,10 @@ select.form-input{cursor:pointer}
         <option value="hung">Hung only</option>
         <option value="no-text">Not Hung + no text</option>
       </select>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="setDedListChecks(true)">☑️ Select all</button>
+        <button class="btn btn-sm" onclick="setDedListChecks(false)">☐ Select none</button>
+      </div>
       <div id="bds-list" style="margin-top:10px;max-height:260px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius-sm)"></div>
       <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
         <label class="form-label" style="margin:0;white-space:nowrap">Set status to</label>
@@ -851,6 +855,10 @@ select.form-input{cursor:pointer}
         <button class="btn btn-sm" onclick="downloadBonusCSV()">⬇️ CSV</button>
       </div>
       <div id="bonus-count" style="font-size:12px;color:var(--gray-500);margin-top:8px"></div>
+      <div style="margin-top:6px;display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="setBonusChecks(true)">☑️ Select all shown</button>
+        <button class="btn btn-sm" onclick="setBonusChecks(false)">☐ Select none</button>
+      </div>
       <div id="bonus-list" style="margin-top:8px;max-height:340px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius-sm)"></div>
       <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <label class="form-label" style="margin:0;white-space:nowrap">Set selected to</label>
@@ -1563,7 +1571,7 @@ function renderLedger(idx){
         <div id="tui-det" class="expand-section"><div id="tui-det-content" style="overflow-x:auto"><div style="font-size:12px;color:var(--gray-500);padding:8px 0">⏳ Loading…</div></div></div>
 
         <!-- DEDICATIONS -->
-        <div class="sec-title"><span>Dedications</span>${secEditBtn('dedications')}</div>
+        <div class="sec-title"><span>Dedications</span><span style="display:flex;gap:6px"><button class="sec-edit-btn ${dedAddFormOpen?'active':''}" onclick="toggleDedAddForm()">${dedAddFormOpen?'✕ Cancel':'+ Add'}</button>${secEditBtn('dedications')}</span></div>
         ${dedIdxs.length?dedIdxs.map(di=>{
           const dr=dedRows[di];
           const item=get(dr,dedHdr,'dedication item');
@@ -1588,7 +1596,7 @@ function renderLedger(idx){
             ${notes2?`<div class="field-row"><span class="field-label">Notes</span><span class="field-value" style="font-size:11px">${notes2}</span></div>`:''}
             ${flags?`<div class="field-row"><span class="field-label">Flags</span><span class="field-value" style="font-size:11px">${flags}</span></div>`:''}
           </div>`;}).join(''):'<div style="font-size:12px;color:var(--gray-500)">No dedications on file.</div>'}
-        ${sectionEditMode.dedications?`
+        ${dedAddFormOpen?`
         <div style="border:1px dashed var(--gray-300);border-radius:var(--radius-sm);padding:10px 12px;margin-top:6px">
           <div style="font-size:12px;font-weight:600;margin-bottom:6px">+ Add a new dedication</div>
           <input class="form-input" id="add-ded-item" list="ded-item-list" placeholder="Dedication item (e.g. Sefer Torah, Amud, Bench…)" style="margin-bottom:6px" />
@@ -1782,6 +1790,11 @@ async function silentRefreshData(){
 // section. Clicking a highlighted field turns it into an input right there —
 // no separate "choose a field" step, no bottom panel.
 let sectionEditMode={};
+let dedAddFormOpen=false;
+function toggleDedAddForm(){
+  dedAddFormOpen=!dedAddFormOpen;
+  renderLedger(currentContactIdx);
+}
 function toggleSectionEdit(section){
   sectionEditMode[section]=!sectionEditMode[section];
   renderLedger(currentContactIdx);
@@ -1929,6 +1942,7 @@ async function appendDedicationRow(){
     }else{
       dedRows.push(row);
     }
+    dedAddFormOpen=false;
     await silentRefreshData();
   }catch(e){
     alert('Save failed: '+e.message);
@@ -2887,6 +2901,9 @@ function loadDedList(){
       <div style="flex:1"><b>${name}</b> · ${item||'?'} · <span style="color:var(--gray-500)">${status}</span></div>
     </label>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--gray-500)">No dedications match this filter.</div>';
 }
+function setDedListChecks(state){
+  document.querySelectorAll('#bds-list input[type=checkbox]').forEach(cb=>{cb.checked=state;});
+}
 
 async function applyDedStatus(){
   if(isDemo){showMsg('bds-msg','Demo mode — no changes written.','info');return;}
@@ -3091,8 +3108,12 @@ function loadBonusList(){
     rows.push({di,acctId,name,status:status||'(blank)',staff:staff||'(unassigned)',date,amt,appliedTo});
   });
   lastBonusRows=rows;
-  document.getElementById('bonus-count').textContent=`${rows.length} donation(s) match.`;
-  list.innerHTML=rows.length?rows.map(r=>`
+  const RENDER_CAP=300;
+  const shown=rows.slice(0,RENDER_CAP);
+  document.getElementById('bonus-count').textContent=rows.length>RENDER_CAP
+    ?`${rows.length} donation(s) match — showing the first ${RENDER_CAP}. Narrow the filter to see the rest, or use "Select all shown" + Apply repeatedly in batches.`
+    :`${rows.length} donation(s) match.`;
+  list.innerHTML=shown.length?shown.map(r=>`
     <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--gray-200);cursor:pointer;font-size:12px">
       <input type="checkbox" data-di="${r.di}" checked style="accent-color:var(--blue)" />
       <div style="flex:1">
@@ -3100,6 +3121,9 @@ function loadBonusList(){
         <span style="color:var(--gray-500)">Status: ${r.status} · Staff: ${r.staff}${r.appliedTo?' · Applied To: '+r.appliedTo:''}</span>
       </div>
     </label>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--gray-500)">No donations match this filter.</div>';
+}
+function setBonusChecks(state){
+  document.querySelectorAll('#bonus-list input[type=checkbox]').forEach(cb=>{cb.checked=state;});
 }
 async function applyBonusBatch(){
   const sCol=bonusStatusCol();
@@ -3198,10 +3222,13 @@ function runCampaignReport(){
       ${undatedCount?`<br/>⚠️ ${undatedCount} donation(s) skipped — no parseable date, so they couldn't be placed in the range.`:''}</span>
     </div>`;
   const list=document.getElementById('camp-list');
-  list.innerHTML=matchRows.length?matchRows.map(r=>`
+  const RENDER_CAP=300;
+  const shownRows=matchRows.slice(0,RENDER_CAP);
+  const capNote=matchRows.length>RENDER_CAP?`<div style="padding:7px 10px;font-size:11px;color:var(--gray-500)">Showing first ${RENDER_CAP} of ${matchRows.length} — totals above already include all of them. Use CSV download for the full list.</div>`:'';
+  list.innerHTML=(shownRows.length?shownRows.map(r=>`
     <div style="padding:7px 10px;border-bottom:1px solid var(--gray-200);font-size:12px">
       <b>${r.name}</b> · ${fmt$(r.amt)} ${r.date?'· '+r.date:''}
-    </div>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--gray-500)">No matching donations.</div>';
+    </div>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--gray-500)">No matching donations.</div>')+capNote;
 }
 function downloadCampaignCSV(){
   if(!lastCampaignRows.length){alert('Run the campaign report first.');return;}
