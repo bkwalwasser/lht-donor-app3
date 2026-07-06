@@ -1597,7 +1597,7 @@ function renderLedger(idx){
             ?`<select class="inline-input" onchange="saveDedicationField(this,${di},'status')"><option value="">— none —</option>${DEDICATION_STATUS_OPTIONS.map(o=>`<option value="${o}" ${o===status?'selected':''}>${o}</option>`).join('')}</select>`
             :(status||'—');
           const textCell=sectionEditMode.dedications
-            ?`<textarea class="inline-input" rows="2" style="width:100%;max-width:none" onblur="saveDedicationField(this,${di},'dedication text')">${escapeHtml(text)}</textarea>`
+            ?`<div style="display:flex;flex-direction:column;gap:4px;width:100%"><textarea class="inline-input" id="ded-text-${di}" rows="2" style="width:100%;max-width:none">${escapeHtml(text)}</textarea><button class="inline-save-btn" style="align-self:flex-end" onclick="saveDedicationField(document.getElementById('ded-text-${di}'),${di},'dedication text')">✓ Save text</button></div>`
             :`<span class="ded-check ${hasTxt?'yes':'no'}">${hasTxt?'✓ Yes':'✗ No'}</span>`;
           return`<div style="background:var(--gray-100);border-left:3px solid var(--navy);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;margin-bottom:8px">
             <div class="field-row"><span class="field-label">Item</span><span class="field-value">${itemCell}</span></div>
