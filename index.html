@@ -720,7 +720,6 @@ select.form-input{cursor:pointer}
         <option value="ded-status">Dedication Status</option>
         <option value="address">Address Update</option>
         <option value="action">Action Plan / Action Date</option>
-        <option value="giving-cat">Giving Category</option>
         <option value="solicitor">Solicitor Assignment</option>
       </select>
     </div>
@@ -778,24 +777,6 @@ select.form-input{cursor:pointer}
         <button class="btn btn-primary" onclick="applyActionBatch()">Apply</button>
       </div>
       <div id="batch-action-msg" class="msg"></div>
-    </div>
-
-    <!-- GIVING CATEGORY -->
-    <div id="batch-giving-cat" class="batch-op-card" style="display:none">
-      <div class="batch-op-title">📊 Reclassify Giving Category</div>
-      <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px">Paste AccountIDs (one per line), then choose the new category.</p>
-      <textarea class="form-textarea" id="batch-cat-ids" rows="5" placeholder="9921&#10;8607&#10;3243"></textarea>
-      <label class="form-label">New Category</label>
-      <select class="form-input" id="batch-cat-val">
-        <option>ACTIVE_LOYAL</option><option>ACTIVE_CONSISTENT</option>
-        <option>RECENTLY_LAPSED</option><option>LAPSED_REENGAGEABLE</option>
-        <option>LAPSED_LONG</option><option>ONE_TIME</option>
-        <option>SPORADIC</option><option>PROSPECTIVE</option>
-      </select>
-      <div class="btn-row" style="margin-top:10px">
-        <button class="btn btn-primary" onclick="applyCatBatch()">Apply</button>
-      </div>
-      <div id="batch-cat-msg" class="msg"></div>
     </div>
 
     <!-- SOLICITOR -->
@@ -2812,7 +2793,7 @@ function clearSync(){syncParsed=[];syncNew=[];document.getElementById('sync-file
 
 function onBatchOpChange(){
   const op=document.getElementById('batch-op').value;
-  const ops=['ded-status','address','action','giving-cat','solicitor'];
+  const ops=['ded-status','address','action','solicitor'];
   ops.forEach(o=>{ const el=document.getElementById('batch-'+o); if(el) el.style.display=o===op?'block':'none'; });
   if(op==='ded-status') loadDedList();
 }
@@ -2950,31 +2931,6 @@ async function applyActionBatch(){
     }
   }
   showMsg('batch-action-msg',`✓ Updated ${ok} field(s) across ${targets.length} contact(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
-}
-
-// ── Giving Category Batch ─────────────────────────────────────────────────
-async function applyCatBatch(){
-  const raw=(document.getElementById('batch-cat-ids').value||'').trim();
-  const newCat=document.getElementById('batch-cat-val').value;
-  const ids=raw.split(/\n/).map(l=>normId(l.trim())).filter(Boolean);
-  const targets=ids.map(id=>{const ci=contactByAcct.get(id);return{id,ci};}).filter(x=>x.ci!==undefined);
-  if(!targets.length){showMsg('batch-cat-msg','No matching AccountIDs found.','error');return;}
-  if(isDemo){showMsg('batch-cat-msg',`Demo: would reclassify ${targets.length} contacts to ${newCat}.`,'info');return;}
-  showMsg('batch-cat-msg',`Updating ${targets.length} contact(s)…`,'info');
-  const catCol=col(contactHdr,'giving category');
-  if(catCol<0){showMsg('batch-cat-msg','Giving Category column not found.','error');return;}
-  let ok=0,fail=0;
-  for(const {ci} of targets){
-    const range=`${encodeURIComponent(TAB.CONTACTS)}!${colToLetter(catCol)}${ci+2}`;
-    try{
-      const res=await authedFetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?valueInputOption=USER_ENTERED`,
-        {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[[newCat]]})}
-      );
-      if(res.ok){contactRows[ci][catCol]=newCat;ok++;}else fail++;
-    }catch{fail++;}
-  }
-  showMsg('batch-cat-msg',`✓ Reclassified ${ok} contact(s).${fail?' '+fail+' failed.':''}`,ok>0?'success':'error');
 }
 
 // ── Solicitor Batch ───────────────────────────────────────────────────────
