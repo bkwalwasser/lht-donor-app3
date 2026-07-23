@@ -113,6 +113,13 @@ select.form-input{cursor:pointer}
 .rel-name.clickable:hover{color:var(--blue-mid)}
 .rel-type{font-size:11px;color:var(--gray-500)}
 .rel-contact{font-size:11px;color:var(--gray-700);margin-top:2px}
+.phone-list{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.phone-entry{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.phone-label{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--blue-mid);background:var(--blue-light);border-radius:10px;padding:2px 7px}
+.phone-number{font-size:12px;color:var(--gray-900);white-space:nowrap}
+.relative-panel{display:none;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px;margin-top:9px}
+.relative-panel.open{display:block}
+.relative-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .ded-check{display:inline-block;font-size:13px;font-weight:600;margin-left:4px}
 .ded-check.yes{color:var(--green)}
 .ded-check.no{color:#A32D2D}
@@ -930,12 +937,15 @@ const TAB = {
 };
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
-let tokenClient=null, accessToken=null, tokenExpiresAt=0, signedInEmail='';
+let tokenClient=null, accessToken=null, tokenExpiresAt=0, signedInEmail='', tokenErrorReject=null;
 
 function gisLoaded() {
   if(window._gisLoaded) return; window._gisLoaded=true;
   if(!window.google?.accounts?.oauth2){setTimeout(gisLoaded,150);return;}
-  tokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPES,hd:'levhatorah.org',callback:''});
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID,scope:SCOPES,hd:'levhatorah.org',callback:'',
+    error_callback:e=>{if(tokenErrorReject)tokenErrorReject(new Error(e?.message||e?.type||'Google sign-in window was closed or blocked.'));}
+  });
   const btn=document.getElementById('signin-btn');
   if(btn) btn.textContent='🔐 Sign in with Google';
 }
@@ -944,7 +954,10 @@ function gisLoaded() {
 function requestToken(prompt){
   return new Promise((resolve,reject)=>{
     if(!tokenClient){reject(new Error('Sign-in not ready'));return;}
+    const timer=setTimeout(()=>{tokenErrorReject=null;reject(new Error('Google sign-in did not open. Allow pop-ups for this site, refresh, and try again.'));},30000);
+    tokenErrorReject=err=>{clearTimeout(timer);tokenErrorReject=null;reject(err);};
     tokenClient.callback=r=>{
+      clearTimeout(timer);tokenErrorReject=null;
       if(r.error){reject(r);return;}
       accessToken=r.access_token;
       tokenExpiresAt=Date.now()+((r.expires_in||3600)*1000)-60000;
@@ -1019,6 +1032,49 @@ function nextProspectId(){
   }
   return 'PROS-'+String(max+1).padStart(6,'0');
 }
+function nextRelativeContactId(){
+  let max=0;
+  for(const row of contactRows){
+    const id=normId(get(row,contactHdr,'accountid'));
+    const m=id.match(/^REL-(\d+)$/i);
+    if(m)max=Math.max(max,parseInt(m[1],10)||0);
+  }
+  return 'REL-'+String(max+1).padStart(6,'0');
+}
+function nextFrontendRelationshipId(){
+  let max=0;
+  for(const row of relRows){
+    const id=normId(get(row,relHdr,'relationshipid'));
+    const m=id.match(/^FRONTEND-REL-(\d+)$/i);
+    if(m)max=Math.max(max,parseInt(m[1],10)||0);
+  }
+  return 'FRONTEND-REL-'+String(max+1).padStart(6,'0');
+}
+function isFamilyRelationshipType(value){
+  const s=String(value||'').toLowerCase();
+  if(!s)return false;
+  if(/solicitor|solicitee|fundrais|honoree|campaign|financial contact/.test(s))return false;
+  return /parent|mother|father|spouse|husband|wife|son|daughter|child|brother|sister|sibling|grand|uncle|aunt|nephew|niece|cousin|family|relative|in-law|step|guardian|fianc|partner/.test(s);
+}
+function relationshipSideLabel(value,isPersonA){
+  const parts=String(value||'').split('/').map(s=>s.trim());
+  let label=(isPersonA?parts[0]:parts[1])||parts[0]||'Relative';
+  label=label.replace(/^(his|her|their|its)\s+/i,'').trim();
+  return label||'Relative';
+}
+function parsePhoneEntries(value){
+  return String(value||'').split(';').map(part=>part.trim()).filter(Boolean).map(part=>{
+    const m=part.match(/^\[([^\]]+)\]\s*(.*)$/);
+    return m?{label:m[1].trim(),number:m[2].trim()}:{label:'Phone',number:part};
+  });
+}
+function renderPhoneField(value){
+  const entries=parsePhoneEntries(value);
+  if(!entries.length)return'';
+  return`<div class="field-row"><span class="field-label">Phone</span><span class="field-value"><div class="phone-list">${
+    entries.map(({label,number})=>`<div class="phone-entry"><span class="phone-label">${escapeHtml(label)}</span><span class="phone-number">${escapeHtml(number)}</span></div>`).join('')
+  }</div></span></div>`;
+}
 
 // All Contacts no longer carries its own copy of these — Donations_Overview
 // is the sole source now. Returns blanks for non-donors (no matching row).
@@ -1075,7 +1131,16 @@ function formatActionMonths(monthSet){
   if(monthSet.size===12)return'🔁 All Months';
   return[...monthSet].sort((a,b)=>a-b).map(m=>MONTH_NAMES[m]).join(', ');
 }
-function fmt$(v){const n=parseFloat(String(v).replace(/[$,\s]/g,''));return isNaN(n)||n<=0?'':'$'+Math.round(n).toLocaleString();}
+function numValue(v){const n=parseFloat(String(v==null?'':v).replace(/[$,\s]/g,''));return isNaN(n)?0:n;}
+function fmt$(v){const n=numValue(v);return n<=0?'':'$'+Math.round(n).toLocaleString();}
+function compactMoney(v){
+  const n=numValue(v);
+  if(n<=0)return'';
+  if(n<1000)return'$'+Math.round(n).toLocaleString();
+  const k=n/1000;
+  const digits=k<10?1:0;
+  return'$'+k.toFixed(digits).replace(/\.0$/,'')+'k';
+}
 function initials(name){const p=name.replace(/,.*/,'').trim().split(/\s+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():name.slice(0,2).toUpperCase();}
 function avatarCls(cat){if(!cat)return'';if(cat.includes('LOYAL'))return'loyal';if(cat.includes('RECENT'))return'recent';if(cat.includes('LAPSED'))return'lapsed';return'';}
 function pillCls(cat){if(!cat)return'pill-one';if(cat==='ACTIVE_LOYAL')return'pill-loyal';if(cat.startsWith('ACTIVE'))return'pill-active';if(cat.includes('LAPSED')||cat.includes('RECENT'))return'pill-lapsed';return'pill-one';}
@@ -1234,6 +1299,16 @@ function resetReportsPanels(){
 
 // ─── LEDGER SEARCH BAR ────────────────────────────────────────────────────────
 let ledgerSearchTimeout = null;
+function contactSearchScore(name,hay,terms){
+  const n=String(name||'').toLowerCase();
+  return terms.reduce((score,term)=>{
+    const safe=term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if(new RegExp('(^|[^a-z0-9])'+safe+'(?=$|[^a-z0-9])').test(n))return score+100;
+    if(new RegExp('(^|[^a-z0-9])'+safe).test(n))return score+60;
+    if(n.includes(term))return score+30;
+    return score+(hay.includes(term)?5:0);
+  },0);
+}
 function onLedgerSearch(q) {
   const drop = document.getElementById('ledger-search-results');
   clearTimeout(ledgerSearchTimeout);
@@ -1249,10 +1324,11 @@ function onLedgerSearch(q) {
       if (!matches(hay)) return;
       const cat = getDonorGivingSnapshot(get(r,contactHdr,'accountid')).cat;
       const city = (addr || '').split(',').slice(1, 3).join(',').trim();
-      hits.push({ i, name, cat, city });
+      hits.push({ i, name, cat, city, sc:contactSearchScore(name,hay,terms) });
     });
     if (!hits.length) { drop.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--gray-500)">No results</div>'; drop.style.display = 'block'; return; }
-    drop.innerHTML = hits.slice(0, 8).map(h => `
+    hits.sort((a,b)=>b.sc-a.sc||a.name.localeCompare(b.name));
+    drop.innerHTML = hits.slice(0, 50).map(h => `
       <div onclick="openLedgerFromSearch(${h.i})" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-200);cursor:pointer" onmouseover="this.style.background='var(--blue-light)'" onmouseout="this.style.background=''">
         <div class="avatar ${avatarCls(h.cat)}" style="width:32px;height:32px;min-width:32px;font-size:11px">${initials(h.name)}</div>
         <div><div style="font-size:13px;font-weight:600">${h.name}</div><div style="font-size:11px;color:var(--gray-500)">${h.city || '—'}</div></div>
@@ -1284,12 +1360,6 @@ function doSearch(q){
   if(!q.trim()){area.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Start typing to search</div></div>';return;}
   const terms=q.toLowerCase().split(/\s+/);
   const matches=hay=>terms.every(t=>hay.includes(t));
-  function scoreHay(hay){
-    return terms.reduce((s,t)=>{
-      const wm=new RegExp('(^|[^a-z])'+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(hay);
-      return s+(wm?2:1);
-    },0);
-  }
   const hits=[];
   contactRows.forEach((r,i)=>{
     const name=get(r,contactHdr,'name');
@@ -1315,10 +1385,10 @@ function doSearch(q){
       const parts=[prog&&yr?prog+' ('+yr+')':prog,mil].filter(Boolean);
       if(parts.length)studentSub='🎓 '+parts.join(' · ');
     }
-    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · '),studentSub,sc:scoreHay(hay)});
+    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · '),studentSub,sc:contactSearchScore(name,hay,terms)});
   });
   if(!hits.length){area.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No results found</div></div>';return;}
-  hits.sort((a,b)=>b.sc-a.sc);
+  hits.sort((a,b)=>b.sc-a.sc||a.name.localeCompare(b.name));
   area.innerHTML=hits.slice(0,50).map(h=>`<div class="result-item" onclick="openLedger(${h.i})"><div class="avatar ${avatarCls(h.cat)}">${initials(h.name)}</div><div style="flex:1;min-width:0"><div class="result-name">${h.name}</div><div class="result-sub">${h.sub||'—'}</div>${h.studentSub?`<div class="result-item-sub">${h.studentSub}</div>`:''}</div><span style="color:var(--gray-300);font-size:18px">›</span></div>`).join('');
 }
 function searchContacts(q){
@@ -1350,8 +1420,9 @@ function searchContacts(q){
       const parts=[prog&&yr?prog+' ('+yr+')':prog,mil].filter(Boolean);
       if(parts.length) studentSub='🎓 '+parts.join(' · ');
     }
-    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · '),studentSub});
+    hits.push({i,name,cat,sub:[city,life?fmt$(life):''].filter(Boolean).join(' · '),studentSub,sc:contactSearchScore(name,hay,terms)});
   });
+  hits.sort((a,b)=>b.sc-a.sc||a.name.localeCompare(b.name));
   return hits;
 }
 
@@ -1362,7 +1433,7 @@ function persistSearch(q){
   if(!q.trim()){pr.style.display='none';return;}
   clearTimeout(persistSearchTimer);
   persistSearchTimer=setTimeout(()=>{
-    const hits=searchContacts(q).slice(0,8);
+    const hits=searchContacts(q).slice(0,50);
     if(!hits.length){pr.style.display='none';return;}
     pr.style.display='block';
     pr.innerHTML=hits.map(h=>`
@@ -1462,16 +1533,25 @@ function renderLedger(idx){
   // Relationships
   const relIdxs=relByAcct.get(acctId)||[];
   const seen=new Map();
+  let frontendOwnBirthday='';
   relIdxs.forEach(ri=>{
     const rr=relRows[ri];
     const isA=normId(get(rr,relHdr,'persona_accountid'))===acctId;
     const otherName=get(rr,relHdr,isA?'personb_name':'persona_name');
     const relType=get(rr,relHdr,'relationshiptype');
-    const bday=get(rr,relHdr,'birthday');
+    if(!isFamilyRelationshipType(relType))return;
+    let bday=get(rr,relHdr,'birthday');
+    const relId=normId(get(rr,relHdr,'relationshipid'));
+    // Frontend rows store Person B's birthday. Show it beside Person B
+    // on their own profile, and beside Person B on Person A's family list.
+    if(/^FRONTEND-REL-/i.test(relId)&&!isA){
+      if(bday&&!frontendOwnBirthday)frontendOwnBirthday=bday;
+      bday='';
+    }
     const anniv=get(rr,relHdr,'anniversary');
     const otherId=normId(get(rr,relHdr,isA?'personb_accountid':'persona_accountid'));
     const key=relType+'|'+otherName;
-    if(!seen.has(key))seen.set(key,{relType,otherName,otherId,bday,anniv});
+    if(!seen.has(key))seen.set(key,{relType,relLabel:relationshipSideLabel(relType,isA),otherName,otherId,bday,anniv});
   });
   const rels=[...seen.values()];
 
@@ -1493,7 +1573,7 @@ function renderLedger(idx){
   // Year grid
   const YEARS=[];for(let y=2002;y<=2026;y++)YEARS.push(y);
   let yrCells='';let hasAnyYear=false;
-  if(doRow){YEARS.forEach(y=>{const v=parseFloat(get(doRow,donOvHdr,String(y)))||0;if(v>0){hasAnyYear=true;const disp=v>=1000?'$'+Math.round(v/1000)+'k':'$'+Math.round(v);yrCells+=`<div class="yr-cell hit"><div class="y">'${String(y).slice(2)}</div><div class="a">${disp}</div></div>`;}});}
+  if(doRow){YEARS.forEach(y=>{const v=numValue(get(doRow,donOvHdr,String(y)));if(v>0){hasAnyYear=true;yrCells+=`<div class="yr-cell hit"><div class="y">'${String(y).slice(2)}</div><div class="a">${compactMoney(v)}</div></div>`;}});}
 
   const donLife=doRow?fmt$(get(doRow,donOvHdr,'lifetime giving')):'';
   const donFirst=doRow?get(doRow,donOvHdr,'first gift year'):'';
@@ -1511,18 +1591,35 @@ function renderLedger(idx){
   const ownStudentIdxs=studentByAcct.get(acctId)||[];
   const tuiIdx=tuiOvByAcct.get(acctId);
   const tuiRow=tuiIdx!==undefined?tuiOvRows[tuiIdx]:null;
-  const childTuiRows=childIdxs.map(si=>{
+  let childTuiRows=childIdxs.map(si=>{
     const cid=normId(get(studentRows[si],studentHdr,'accountid'));
     const ti=tuiOvByAcct.get(cid);
     return ti!==undefined?{name:get(studentRows[si],studentHdr,'name'),row:tuiOvRows[ti],acctId:cid}:null;
   }).filter(Boolean);
+  let displayTuiRow=tuiRow;
+  let displayTuiLabel=ownStudentIdxs.length?name:(childTuiRows.length?'Unattributed family tuition':'Account-level tuition');
+  function mergeTuitionRows(primary,additional){
+    const merged=[...primary];
+    const firstMoneyCol=3;
+    const width=Math.max(merged.length,additional.length);
+    for(let i=firstMoneyCol;i<width;i++)merged[i]=numValue(merged[i])+numValue(additional[i]);
+    return merged;
+  }
+  // When a non-student parent has exactly one documented student child,
+  // account-level tuition and student-attributed tuition are two parts of
+  // that same child's history. Merge them for one clear overview.
+  if(tuiRow&&!ownStudentIdxs.length&&childTuiRows.length===1){
+    childTuiRows=[{...childTuiRows[0],row:mergeTuitionRows(childTuiRows[0].row,tuiRow)}];
+    displayTuiRow=null;
+  }
+  const hasTuiOverview=!!(displayTuiRow||childTuiRows.length);
 
   function renderTuiRow(tuiR,label){
     if(!tuiR)return'';
     const subtotal=fmt$(get(tuiR,tuiOvHdr,'total tuition'));
     const total=fmt$(get(tuiR,tuiOvHdr,'total school payments'));
     let yearLines='';
-    Object.keys(tuiOvHdr).forEach(k=>{const m=k.match(/^(\d{4}\/\d{2})\s+(.+)$/);if(!m)return;const v=parseFloat(tuiR[tuiOvHdr[k]])||0;if(v>0)yearLines+=`<div class="field-row"><span class="field-label">${m[1]} ${m[2]}</span><span class="field-value money">${fmt$(v)}</span></div>`;});
+    Object.keys(tuiOvHdr).forEach(k=>{const m=k.match(/^(\d{4}\/\d{2})\s+(.+)$/);if(!m)return;const v=numValue(tuiR[tuiOvHdr[k]]);if(v>0)yearLines+=`<div class="field-row"><span class="field-label">${m[1]} ${m[2]}</span><span class="field-value money">${compactMoney(v)}</span></div>`;});
     return`${label?`<div style="font-size:12px;font-weight:600;color:var(--navy);margin:8px 0 4px">${label}</div>`:''}
       <div class="stat-row"><div class="stat-box"><div class="s-label">Tuition Paid</div><div class="s-value">${subtotal||'—'}</div></div><div class="stat-box"><div class="s-label">All School Payments</div><div class="s-value">${total||'—'}</div></div></div>${yearLines}`;
   }
@@ -1548,7 +1645,8 @@ function renderLedger(idx){
         <!-- CONTACT INFO -->
         <div class="sec-title"><span>Contact</span>${secEditBtn('contact')}</div>
         ${fieldRow('Name','contact','name',name,'text')}
-        ${fieldRow('Phone','contact','phone',phone,'text')}
+        ${frontendOwnBirthday?`<div class="field-row"><span class="field-label">Birthday</span><span class="field-value">🎂 ${escapeHtml(frontendOwnBirthday)}</span></div>`:''}
+        ${sectionEditMode.contact?fieldRow('Phone','contact','phone',phone,'text'):renderPhoneField(phone)}
         ${fieldRow('Street','contact','street address',addressParts.street,'text')}
         ${fieldRow('City','contact','city',addressParts.city,'text')}
         ${fieldRow('State / Region','contact','state/region',addressParts.state,'text')}
@@ -1573,18 +1671,50 @@ function renderLedger(idx){
         ${emailPool.length?`<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="openEmailPanel()">✉️ Email selected</button></div>`:''}`:''}
 
         <!-- RELATIONSHIPS -->
-        <div class="sec-title"><span>Relationships</span></div>
-        ${rels.length?rels.map(({relType,otherName,otherId,bday,anniv})=>{
+        <div class="sec-title"><span>Family Relationships</span><button class="sec-edit-btn" onclick="toggleRelativePanel()">+ Add relative</button></div>
+        ${rels.length?rels.map(({relLabel,otherName,otherId,bday,anniv})=>{
           const hasProfile=contactByAcct.has(otherId);
           const contactIdx=hasProfile?contactByAcct.get(otherId):-1;
           return`<div class="rel-item">
             <div class="rel-info">
               <div class="rel-name ${hasProfile?'clickable':''}" ${hasProfile?`onclick="openLedger(${contactIdx})"`:''}>${otherName}${hasProfile?' ›':''}</div>
-              <div class="rel-type">${relType}</div>
+              <div class="rel-type">${escapeHtml(relLabel)}</div>
               ${bday?`<div class="rel-contact">🎂 ${bday}</div>`:''}
               ${anniv?`<div class="rel-contact">💍 ${anniv}</div>`:''}
             </div>
           </div>`;}).join(''):'<div style="font-size:12px;color:var(--gray-500)">No relationships on file.</div>'}
+        <div id="add-relative-panel" class="relative-panel">
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:7px">Add a family member of ${escapeHtml(name)}</div>
+          <label class="form-label">Relative's full name *</label>
+          <input class="form-input" id="rel-name" placeholder="e.g. COHEN, Daniel" />
+          <label class="form-label">The new person is this contact's… *</label>
+          <select class="form-input" id="rel-type">
+            <option value="">— choose relationship —</option>
+            <option value="spouse">Spouse / partner</option>
+            <option value="child">Child</option>
+            <option value="parent">Parent</option>
+            <option value="sibling">Sibling</option>
+            <option value="grandchild">Grandchild</option>
+            <option value="grandparent">Grandparent</option>
+            <option value="auntuncle">Aunt or uncle</option>
+            <option value="niecenephew">Niece or nephew</option>
+            <option value="cousin">Cousin</option>
+            <option value="inlaw">In-law</option>
+            <option value="other">Other relative</option>
+          </select>
+          <div class="relative-grid">
+            <div><label class="form-label">Birthday</label><input class="form-input" id="rel-birthday" type="date" /></div>
+            <div><label class="form-label">Phone</label><input class="form-input" id="rel-phone" type="tel" /></div>
+          </div>
+          <label class="form-label">Email</label>
+          <input class="form-input" id="rel-email" type="email" />
+          <div style="font-size:10px;color:var(--gray-500);margin-top:5px">If an exact matching contact already exists, the app links that record instead of creating a duplicate.</div>
+          <div class="btn-row" style="margin-top:9px">
+            <button class="btn btn-primary btn-sm" onclick="saveNewRelative()">Save relative</button>
+            <button class="btn btn-sm" onclick="toggleRelativePanel(false)">Cancel</button>
+          </div>
+          <div id="rel-msg" class="msg"></div>
+        </div>
 
         <!-- GIVING SUMMARY -->
         <div class="sec-title" style="margin-top:14px"><span>Giving Summary</span>${secEditBtn('giving')}</div>
@@ -1662,7 +1792,9 @@ function renderLedger(idx){
           </div>`;}).join('')}`:''}
 
         <!-- TUITION OVERVIEW -->
-        ${(tuiRow||childTuiRows.length)?`<div class="sec-title"><span>Tuition Overview</span></div>${tuiRow?renderTuiRow(tuiRow,''):''}${childTuiRows.map(({name:cn,row:cr})=>renderTuiRow(cr,cn)).join('')}`:''}
+        <div id="tui-overview-live" data-has-overview="${hasTuiOverview?'1':'0'}">
+          ${hasTuiOverview?`<div class="sec-title"><span>Tuition Overview</span></div>${displayTuiRow?renderTuiRow(displayTuiRow,displayTuiLabel):''}${childTuiRows.map(({name:cn,row:cr})=>renderTuiRow(cr,cn)).join('')}`:'<div class="sec-title"><span>Tuition Overview</span></div><div style="font-size:12px;color:var(--gray-500);padding:6px 0">⏳ Building from payment detail…</div>'}
+        </div>
 
         <!-- TUITION DETAIL -->
         <div class="sec-title"><span>Tuition Payments</span><button class="expand-btn" onclick="toggleExpand('tui-det')">▶ Show detail</button></div>
@@ -1732,18 +1864,75 @@ function toggleExpand(id){
 
 async function loadAndInjectDetails(acctId){
   await ensureDetailLoaded();
+  if(acctId!==currentAcctId)return;
   const donEl=document.getElementById('don-det-content');
   if(donEl){
     const rows=donDetRows.filter(r=>isReceivedDonationRow(r)&&normId(get(r,donDetHdr,'payeract_id'))===acctId);
     donEl.innerHTML=rows.length?renderDetailTable(rows,donDetHdr,['date','year','appliedto','appliedamount','method','cur_code','notes'],['Date','Year','Applied To','Amount','Method','Currency','Notes']):'<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No donation payment records found.</div>';
   }
+  const childIds=(studentByAcct.get('p:'+acctId)||[]).map(si=>normId(get(studentRows[si],studentHdr,'accountid')));
+  const allIds=new Set([acctId,...childIds]);
+  const rows=tuiDetRows.filter(r=>allIds.has(normId(get(r,tuiDetHdr,'payeract_id')))||allIds.has(normId(get(r,tuiDetHdr,'studentaccountid'))));
   const tuiEl=document.getElementById('tui-det-content');
   if(tuiEl){
-    const childIds=(studentByAcct.get('p:'+acctId)||[]).map(si=>normId(get(studentRows[si],studentHdr,'accountid')));
-    const allIds=new Set([acctId,...childIds]);
-    const rows=tuiDetRows.filter(r=>allIds.has(normId(get(r,tuiDetHdr,'payeract_id')))||allIds.has(normId(get(r,tuiDetHdr,'studentaccountid'))));
     tuiEl.innerHTML=rows.length?renderDetailTable(rows,tuiDetHdr,['date','year','program','payment cat.','appliedamount','method','cur_code','studentname','notes'],['Date','Year','Program','Type','Amount','Method','Cur','Student','Notes']):'<div style="font-size:12px;color:var(--gray-500);padding:8px 0">No tuition payment records found.</div>';
   }
+  const overviewEl=document.getElementById('tui-overview-live');
+  if(overviewEl&&overviewEl.dataset.hasOverview==='0'){
+    const relevant=rows.filter(isOverviewTuitionRow);
+    overviewEl.innerHTML=relevant.length?`<div class="sec-title"><span>Tuition Overview</span></div>${renderTuitionOverviewFromDetails(relevant,acctId)}`:'';
+  }
+}
+
+function isOverviewTuitionRow(row){
+  const cat=(get(row,tuiDetHdr,'payment cat.')||'').toLowerCase();
+  return /tuition|registration|room|board|reimbursement|av zman/.test(cat)&&!/application|credit card surcharge|transcript|phone|laundry/.test(cat);
+}
+
+function renderTuitionOverviewFromDetails(rows,acctId){
+  const groups=new Map();
+  rows.forEach(row=>{
+    const studentId=normId(get(row,tuiDetHdr,'studentaccountid'));
+    const studentName=(get(row,tuiDetHdr,'studentname')||'').trim();
+    const key=studentId||studentName.toLowerCase()||'account';
+    if(!groups.has(key)){
+      let label=studentName;
+      if(!label&&studentId){
+        const ci=contactByAcct.get(studentId);
+        if(ci!==undefined)label=get(contactRows[ci],contactHdr,'name');
+      }
+      if(!label){
+        const own=studentByAcct.get(acctId)||[];
+        label=own.length?get(studentRows[own[0]],studentHdr,'name'):'Account-level tuition';
+      }
+      groups.set(key,{label,totalTuition:0,totalSchool:0,years:new Map()});
+    }
+    const g=groups.get(key);
+    const amount=numValue(get(row,tuiDetHdr,'appliedamount'));
+    const cat=(get(row,tuiDetHdr,'payment cat.')||'School Payment').trim();
+    const year=(get(row,tuiDetHdr,'year')||'No Year').trim();
+    g.totalSchool+=amount;
+    if(cat.toLowerCase().includes('tuition'))g.totalTuition+=amount;
+    const yk=year+' '+cat;
+    g.years.set(yk,(g.years.get(yk)||0)+amount);
+  });
+  const accountGroup=groups.get('account');
+  const attributed=[...groups.entries()].filter(([key])=>key!=='account');
+  if(accountGroup&&attributed.length===1){
+    const target=attributed[0][1];
+    target.totalTuition+=accountGroup.totalTuition;
+    target.totalSchool+=accountGroup.totalSchool;
+    accountGroup.years.forEach((amount,key)=>target.years.set(key,(target.years.get(key)||0)+amount));
+    groups.delete('account');
+  }
+  return[...groups.values()].map(g=>`
+    <div style="font-size:12px;font-weight:600;color:var(--navy);margin:8px 0 4px">${escapeHtml(g.label)}</div>
+    <div class="stat-row">
+      <div class="stat-box"><div class="s-label">Tuition Paid</div><div class="s-value">${fmt$(g.totalTuition)||'—'}</div></div>
+      <div class="stat-box"><div class="s-label">All School Payments</div><div class="s-value">${fmt$(g.totalSchool)||'—'}</div></div>
+    </div>
+    ${[...g.years.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([label,amount])=>`<div class="field-row"><span class="field-label">${escapeHtml(label)}</span><span class="field-value money">${compactMoney(amount)}</span></div>`).join('')}
+  `).join('');
 }
 
 function renderDetailTable(rows,hdrObj,keys,labels){
@@ -2044,6 +2233,109 @@ function fieldRow(label, section, fieldKey, displayVal, fieldType, editable){
   }
   const shown=displayVal||'<span style="color:var(--gray-400)">— click to add —</span>';
   return `<div class="field-row"><span class="field-label">${label}</span><span class="field-value inline-editable" data-field="${fieldKey}" data-type="${fieldType||'text'}" onclick="startInlineEdit(this)">${shown}</span></div>`;
+}
+
+// ─── FAMILY RELATIONSHIPS ─────────────────────────────────────────────────────
+function toggleRelativePanel(forceOpen){
+  const panel=document.getElementById('add-relative-panel');
+  if(!panel)return;
+  const open=forceOpen===undefined?!panel.classList.contains('open'):!!forceOpen;
+  panel.classList.toggle('open',open);
+  if(open){const el=document.getElementById('rel-name');if(el)el.focus();}
+}
+
+const FRONTEND_REL_TYPES={
+  spouse:'Spouse / Spouse',
+  child:'Parent / Child',
+  parent:'Child / Parent',
+  sibling:'Sibling / Sibling',
+  grandchild:'Grandparent / Grandchild',
+  grandparent:'Grandchild / Grandparent',
+  auntuncle:'Niece or Nephew / Aunt or Uncle',
+  niecenephew:'Aunt or Uncle / Niece or Nephew',
+  cousin:'Cousin / Cousin',
+  inlaw:'In-law / In-law',
+  other:'Relative / Relative'
+};
+
+async function saveNewRelative(){
+  const relativeName=(document.getElementById('rel-name').value||'').trim();
+  const kind=document.getElementById('rel-type').value;
+  const birthday=document.getElementById('rel-birthday').value||'';
+  const phone=(document.getElementById('rel-phone').value||'').trim();
+  const email=(document.getElementById('rel-email').value||'').trim();
+  if(!relativeName||!kind){showMsg('rel-msg','Enter the relative’s name and relationship.','error');return;}
+  const relationshipType=FRONTEND_REL_TYPES[kind];
+  const sourceRow=contactRows[currentContactIdx];
+  const sourceId=normId(get(sourceRow,contactHdr,'accountid'));
+  const sourceName=get(sourceRow,contactHdr,'name');
+
+  const nameKey=relativeName.toLowerCase().replace(/\s+/g,' ');
+  const exactMatches=[];
+  contactRows.forEach((row,i)=>{
+    if(i===currentContactIdx)return;
+    const candidate=String(get(row,contactHdr,'name')||'').trim().toLowerCase().replace(/\s+/g,' ');
+    if(candidate===nameKey)exactMatches.push(i);
+  });
+  if(exactMatches.length>1){
+    showMsg('rel-msg','More than one existing contact has that exact name. Please distinguish the name before saving.','error');return;
+  }
+
+  let relativeIdx=exactMatches.length?exactMatches[0]:-1;
+  let relativeId=relativeIdx>=0?normId(get(contactRows[relativeIdx],contactHdr,'accountid')):nextRelativeContactId();
+  const relativeDisplayName=relativeIdx>=0?get(contactRows[relativeIdx],contactHdr,'name'):relativeName;
+  const alreadyLinked=(relByAcct.get(sourceId)||[]).some(ri=>{
+    const rr=relRows[ri];
+    const a=normId(get(rr,relHdr,'persona_accountid'));
+    const b=normId(get(rr,relHdr,'personb_accountid'));
+    return (a===sourceId&&b===relativeId)||(a===relativeId&&b===sourceId);
+  });
+  if(alreadyLinked){showMsg('rel-msg','These contacts already have a relationship on file.','error');return;}
+
+  showMsg('rel-msg',relativeIdx>=0?'Linking existing contact…':'Creating relative and relationship…','info');
+  try{
+    if(relativeIdx<0){
+      const maxContactCol=Math.max(...Object.values(contactHdr).filter(v=>typeof v==='number'),24);
+      const contactRow=new Array(maxContactCol+1).fill('');
+      const setContact=(field,val)=>{const i=col(contactHdr,field);if(i>=0)contactRow[i]=val;};
+      setContact('accountid',relativeId);
+      setContact('name',relativeName);
+      setContact('phone',phone);
+      setContact('email',email);
+      setContact('contact notes',`Family member of ${sourceName}`);
+      setContact('data source','Frontend Relative');
+      if(!isDemo){
+        const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.CONTACTS)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+        const res=await authedFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[contactRow]})});
+        if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+      }
+      contactRows.push(contactRow);
+      relativeIdx=contactRows.length-1;
+    }
+
+    const maxRelCol=Math.max(...Object.values(relHdr).filter(v=>typeof v==='number'),7);
+    const relRow=new Array(maxRelCol+1).fill('');
+    const setRel=(field,val)=>{const i=col(relHdr,field);if(i>=0)relRow[i]=val;};
+    setRel('relationshipid',nextFrontendRelationshipId());
+    setRel('persona_accountid',sourceId);
+    setRel('persona_name',sourceName);
+    setRel('relationshiptype',relationshipType);
+    setRel('personb_accountid',relativeId);
+    setRel('personb_name',relativeDisplayName);
+    setRel('birthday',birthday);
+    if(!isDemo){
+      const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.RELATIONSHIPS)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+      const res=await authedFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[relRow]})});
+      if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+    }
+    relRows.push(relRow);
+    buildIndexes();
+    showMsg('rel-msg',exactMatches.length?'✓ Existing contact linked as family.':'✓ Relative created and linked.','success');
+    scheduleBackgroundRefresh();
+    setTimeout(()=>renderLedger(currentContactIdx),900);
+  }catch(e){
+    showMsg('rel-msg','Could not save: '+e.message+'. If the contact was created, retrying will link the existing record.','error');
+  }
 }
 
 // ─── DEDICATIONS: inline item edit + delete ────────────────────────────────────
