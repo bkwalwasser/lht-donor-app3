@@ -858,13 +858,14 @@ select.form-input{cursor:pointer}
 
     <div class="card">
       <div class="section-head">🎁 Bonus Tracker</div>
-      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Donations with a bonus status set in Donations_Detail. Blank/unset rows are treated as not-yet-processed so nothing falls through the cracks.</p>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Donations with a bonus status set in Donations_Detail. Historical Admire records may also show “Reviewed - No Bonus Recorded” when the payment was reviewed but no separate bonus assignment was preserved. Blank/unset rows are treated as not-yet-processed so nothing falls through the cracks.</p>
       <label class="form-label" style="margin-top:0">Show</label>
       <select class="form-input" id="bonus-filter">
         <option value="needs-action">Needs action (Eligible, Not Processed + blank + Not Reviewed)</option>
         <option value="not-eligible">Not Eligible</option>
         <option value="eligible-not-processed">Eligible, Not Processed (set only)</option>
         <option value="not-reviewed">Not Reviewed (set only)</option>
+        <option value="reviewed-no-bonus">Reviewed - No Bonus Recorded</option>
         <option value="blank">Blank / no status set</option>
         <option value="done">Eligible, Done</option>
         <option value="all">All bonus rows</option>
@@ -885,6 +886,7 @@ select.form-input{cursor:pointer}
           <option value="Not Eligible">Not Eligible</option>
           <option value="Eligible, Not Processed">Eligible, Not Processed</option>
           <option value="Eligible, Done" selected>Eligible, Done</option>
+          <option value="Reviewed - No Bonus Recorded">Reviewed - No Bonus Recorded</option>
           <option value="Not Reviewed">Not Reviewed</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="applyBonusBatch()">Apply to selected</button>
@@ -3552,6 +3554,7 @@ function bonusRowMatches(status,filterVal){
     case 'not-eligible': return sl==='not eligible';
     case 'eligible-not-processed': return sl==='eligible, not processed';
     case 'not-reviewed': return sl==='not reviewed';
+    case 'reviewed-no-bonus': return sl==='reviewed - no bonus recorded';
     case 'blank': return !s;
     case 'done': return sl==='eligible, done';
     case 'all': return true;
