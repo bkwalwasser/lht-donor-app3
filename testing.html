@@ -583,6 +583,7 @@ select.form-input{cursor:pointer}
           <div class="cb-group">
             <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="category" checked onchange="updateChip(this)"> Contact Type</label>
             <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="givingcat" checked onchange="updateChip(this)"> Giving Category</label>
+            <label class="cb-chip checked"><input type="checkbox" class="q-col-cb" value="recordstatus" checked onchange="updateChip(this)"> Record Status / Data Issue</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="accountid" onchange="updateChip(this)"> Account ID</label>
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Contact Info</div>
@@ -628,7 +629,11 @@ select.form-input{cursor:pointer}
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Relationships</div>
           <div class="cb-group">
-            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parent" onchange="updateChip(this)"> Parent Name &amp; Phone</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="children" onchange="updateChip(this)"> Student / Child Name</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parent" onchange="updateChip(this)"> Parent / Guardian Name</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parentphone" onchange="updateChip(this)"> Parent Phone</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parentemail" onchange="updateChip(this)"> Parent Email</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parentaddress" onchange="updateChip(this)"> Parent Address</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="spouse" onchange="updateChip(this)"> Spouse/Partner</label>
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Other</div>
@@ -2845,8 +2850,8 @@ function _doRunQuery(){
     const needsEd=yrFrom||yrTo||progText||progText2||qeArmy||qeLLC||qeBet||qeHousing;
     if(needsEd){
       const ownSIs=studentByAcct.get(acctId)||[];
-      const childSIs=studentByAcct.get('p:'+acctId)||[];
-      const allSIs=[...ownSIs,...childSIs];
+      const childSIs=relatedStudentIndexesForAccount(acctId);
+      const allSIs=[...new Set([...ownSIs,...childSIs])];
       if(!allSIs.length) return;
       const passEd=allSIs.some(si=>{
         const sr=studentRows[si];
@@ -2896,10 +2901,101 @@ function _doRunQuery(){
   renderQueryResults(results);
 }
 
+function relationshipFamilyRole(label){
+  const s=String(label||'').toLowerCase();
+  if(/\bgrand(parent|mother|father)\b/.test(s)||/\bgrand(child|son|daughter)\b/.test(s))return'other';
+  if(/\b(parent|mother|father|guardian)\b/.test(s)||/\bstep(parent|mother|father)\b/.test(s))return'parent';
+  if(/\b(child|son|daughter)\b/.test(s)||/\bstep(child|son|daughter)\b/.test(s))return'child';
+  return'other';
+}
+
+function familyMembersForAccount(acctId,role){
+  const ai=normId(acctId);
+  const found=new Map();
+  const add=(id,name,studentIndex)=>{
+    const oid=normId(id);
+    const key=oid||String(name||'').trim().toLowerCase();
+    if(!key)return;
+    const ci=oid?contactByAcct.get(oid):undefined;
+    const contactName=ci!==undefined?get(contactRows[ci],contactHdr,'name'):'';
+    const studentName=studentIndex!==undefined?get(studentRows[studentIndex],studentHdr,'name'):'';
+    if(!found.has(key))found.set(key,{id:oid,name:contactName||studentName||name||'',ci,studentIndex});
+  };
+
+  (relByAcct.get(ai)||[]).forEach(ri=>{
+    const rr=relRows[ri];
+    const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;
+    const relType=get(rr,relHdr,'relationshiptype');
+    if(!isFamilyRelationshipType(relType))return;
+    const otherRole=relationshipFamilyRole(relationshipSideLabel(relType,isA));
+    if(otherRole!==role)return;
+    const oid=normId(get(rr,relHdr,isA?'personb_accountid':'persona_accountid'));
+    const on=get(rr,relHdr,isA?'personb_name':'persona_name');
+    const sis=oid?(studentByAcct.get(oid)||[]):[];
+    add(oid,on,sis.length?sis[0]:undefined);
+  });
+
+  if(role==='parent'){
+    (studentByAcct.get(ai)||[]).forEach(si=>{
+      const sr=studentRows[si];
+      add(get(sr,studentHdr,'parent_accountid'),get(sr,studentHdr,'parent_name'),undefined);
+    });
+  }else if(role==='child'){
+    (studentByAcct.get('p:'+ai)||[]).forEach(si=>{
+      const sr=studentRows[si];
+      add(get(sr,studentHdr,'accountid'),get(sr,studentHdr,'name'),si);
+    });
+  }
+  return[...found.values()];
+}
+
+function relatedStudentIndexesForAccount(acctId){
+  const out=new Set(studentByAcct.get('p:'+normId(acctId))||[]);
+  familyMembersForAccount(acctId,'child').forEach(m=>{
+    if(m.studentIndex!==undefined)out.add(m.studentIndex);
+    (studentByAcct.get(m.id)||[]).forEach(si=>out.add(si));
+  });
+  return[...out];
+}
+
+function familyMemberValue(acctId,role,field){
+  const vals=[];
+  familyMembersForAccount(acctId,role).forEach(m=>{
+    let v='';
+    if(field==='name')v=m.name;
+    else if(m.ci!==undefined){
+      const cr=contactRows[m.ci];
+      if(field==='phone')v=get(cr,contactHdr,'phone');
+      else if(field==='email')v=get(cr,contactHdr,'email');
+      else if(field==='address')v=contactAddressText(cr);
+    }
+    if(!v&&m.studentIndex!==undefined){
+      const sr=studentRows[m.studentIndex];
+      if(field==='phone')v=[get(sr,studentHdr,'phone1'),get(sr,studentHdr,'phone2')].filter(Boolean).join('; ');
+      else if(field==='email')v=get(sr,studentHdr,'email');
+      else if(field==='address')v=[get(sr,studentHdr,'address'),get(sr,studentHdr,'city'),get(sr,studentHdr,'state')].filter(Boolean).join(', ');
+    }
+    String(v||'').split(';').map(x=>x.trim()).filter(Boolean).forEach(x=>{if(!vals.includes(x))vals.push(x);});
+  });
+  return vals.join('; ');
+}
+
+function contactRecordStatus(row){
+  const issues=[];
+  const street=get(row,contactHdr,'street address');
+  const notes=get(row,contactHdr,'contact notes');
+  const name=get(row,contactHdr,'name').trim();
+  if(/\*{3}\s*inactive\s*\*{3}/i.test(street)||/\bstatus\s*:\s*inactive\b/i.test(notes))issues.push('Inactive');
+  if(/\bdeceased\b|\bpassed away\b/i.test(notes))issues.push('Deceased');
+  if(name&&!name.includes(',')&&name.split(/\s+/).length===1)issues.push('Name incomplete in source');
+  return issues.join(' · ');
+}
+
 // ── Column definitions ────────────────────────────────────────────────────────
 const Q_COL_DEFS={
   category:   {label:'Type',        fn:(r,x)=>x.category||'—'},
   givingcat:  {label:'Category',    fn:(r,x)=>x.cat?`<span class="hero-pill ${pillCls(x.cat)}" style="font-size:10px;margin:0">${pillLabel(x.cat)}</span>`:'—'},
+  recordstatus:{label:'Record Status / Data Issue',fn:(r,x)=>contactRecordStatus(r)},
   accountid:  {label:'Account ID',  fn:(r,x)=>get(r,contactHdr,'accountid')},
   phone:      {label:'Phone',       fn:(r,x)=>get(r,contactHdr,'phone')},
   email:      {label:'Email',       fn:(r,x)=>get(r,contactHdr,'email')},
@@ -2927,7 +3023,11 @@ const Q_COL_DEFS={
   housing:    {label:'Housing',     fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'housingtag')).filter(Boolean).join(', ')}},
   postprog:   {label:'Post-Prog',   fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'postprogram')).filter(Boolean).join(', ')}},
   hesder:     {label:'Hesder',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'hesder')).filter(Boolean).join(', ')}},
-  parent:     {label:'Parent',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('parent')||rt.includes('father')||rt.includes('mother')){const on=get(rr,relHdr,isA?'personb_name':'persona_name');const oid=normId(get(rr,relHdr,isA?'personb_accountid':'persona_accountid'));const ci2=contactByAcct.get(oid);const ph=ci2!==undefined?get(contactRows[ci2],contactHdr,'phone'):'';out+=on+(ph?' ('+ph+')':'');}});return out}},
+  children:   {label:'Student / Child',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'child','name')},
+  parent:     {label:'Parent / Guardian',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','name')},
+  parentphone:{label:'Parent Phone',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','phone')},
+  parentemail:{label:'Parent Email',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','email')},
+  parentaddress:{label:'Parent Address',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','address')},
   spouse:     {label:'Spouse',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('spouse')||rt.includes('wife')||rt.includes('husband')||rt.includes('partner')){out=get(rr,relHdr,isA?'personb_name':'persona_name');}});return out}},
   yahrtzeit:  {label:'Yahrtzeit',   fn:(r,x)=>{const m=get(r,contactHdr,'yahrtzeit month');const d=get(r,contactHdr,'yahrtzeit day of month');const f=get(r,contactHdr,'yahrtzeit for');return(m?(d?d+' '+m:m):'')+(f?' · '+f:'');}},
 };
@@ -3178,10 +3278,17 @@ function clearQuery(){
 // ── Query CSV Download ────────────────────────────────────────────────────────
 function downloadQueryCSV(){
   if(!lastQueryResults.length){alert('Run a query first.');return;}
-  const headers=['Name','Type','Giving Category','State','Lifetime Giving','Action Plan','Email'];
-  const rows=lastQueryResults.map(({i,name,cat,category,state,lifetime,action,email})=>[
-    name, category, cat, state, lifetime?fmt$(lifetime):'', action, email
-  ]);
+  const cols=getActiveCols();
+  const headers=['Name',...cols.map(c=>Q_COL_DEFS[c]?Q_COL_DEFS[c].label:c)];
+  const plain=v=>{
+    const el=document.createElement('div');
+    el.innerHTML=String(v??'');
+    return el.textContent||el.innerText||'';
+  };
+  const rows=lastQueryResults.map(x=>{
+    const r=contactRows[x.i];
+    return[x.name,...cols.map(c=>plain(Q_COL_DEFS[c]?Q_COL_DEFS[c].fn(r,x):''))];
+  });
   const csv=[headers,...rows].map(r=>r.map(v=>{
     const s=String(v||'').replace(/"/g,'""');
     return '"'+s+'"';
