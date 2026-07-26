@@ -182,6 +182,12 @@ select.form-input{cursor:pointer}
 .sol-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .sol-chip{display:inline-flex;align-items:center;gap:4px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue-mid);border-radius:20px;padding:3px 8px;font-size:11px;font-weight:500}
 .sol-chip button{background:none;border:none;cursor:pointer;color:var(--blue-mid);font-size:13px;line-height:1;padding:0}
+.edu-multi-wrap{position:relative;margin-top:4px}
+.edu-multi-btn{width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}
+.edu-multi-dropdown{position:absolute;left:0;right:0;background:white;border:1px solid var(--gray-300);border-radius:var(--radius-sm);box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:320;max-height:245px;overflow-y:auto;margin-top:2px;display:none;padding:5px}
+.edu-multi-option{display:flex;align-items:center;gap:7px;padding:7px 8px;font-size:12px;border-radius:5px;cursor:pointer}
+.edu-multi-option:hover{background:var(--blue-light)}
+.edu-multi-option input{accent-color:var(--blue)}
 .range-row{display:flex;gap:6px;align-items:center;margin-top:4px}
 .range-row .form-input{flex:1}
 .range-row span{font-size:12px;color:var(--gray-500);white-space:nowrap}
@@ -544,12 +550,13 @@ select.form-input{cursor:pointer}
       <!-- EDUCATIONAL (collapsible) -->
       <div class="q-section">
         <div class="q-section-head" onclick="toggleQSection('qe')">🎓 Educational <span id="qe-arrow">▾</span></div>
-        <div class="q-section-body collapsed" id="qe-body">
-          <label class="form-label" style="margin-top:0">Student years attended (includes parents)</label>
-          <div class="range-row">
-            <input class="form-input" id="qe-yr-from" placeholder="From year e.g. 2018" type="number" min="2000" max="2030" />
-            <span>to</span>
-            <input class="form-input" id="qe-yr-to" placeholder="To year e.g. 2024" type="number" min="2000" max="2030" />
+      <div class="q-section-body collapsed" id="qe-body">
+          <label class="form-label" style="margin-top:0">Academic year(s) attended — select one or many (includes parents)</label>
+          <div class="edu-multi-wrap">
+            <button type="button" class="form-input edu-multi-btn" id="qe-years-btn" onclick="toggleEduDropdown('years',event)">
+              <span id="qe-years-label">Any academic year</span><span>▾</span>
+            </button>
+            <div class="edu-multi-dropdown" id="qe-years-dropdown"></div>
           </div>
           <label class="form-label">Quick filters</label>
           <div class="cb-group">
@@ -558,11 +565,14 @@ select.form-input{cursor:pointer}
             <label class="cb-chip"><input type="checkbox" id="qe-bet" onchange="updateChip(this)"> Shiur Bet (incl. LLC)</label>
             <label class="cb-chip"><input type="checkbox" id="qe-housing" onchange="updateChip(this)"> 🏠 LLC Housing only</label>
           </div>
-          <label class="form-label">Program history contains</label>
-          <input class="form-input" id="qe-prog" placeholder="e.g. Hesder, Aleph…" />
-          <label class="form-label">Also contains (OR)</label>
-          <input class="form-input" id="qe-prog2" placeholder="second term e.g. LLC…" />
-          <div style="font-size:11px;color:var(--gray-500);margin-top:3px">Either term matches. Leave blank to ignore.</div>
+          <label class="form-label">Program history — select one or many</label>
+          <div class="edu-multi-wrap">
+            <button type="button" class="form-input edu-multi-btn" id="qe-programs-btn" onclick="toggleEduDropdown('programs',event)">
+              <span id="qe-programs-label">Any program</span><span>▾</span>
+            </button>
+            <div class="edu-multi-dropdown" id="qe-programs-dropdown"></div>
+          </div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:3px">Multiple selections use OR within the list. Year and program selections work together.</div>
         </div>
       </div>
 
@@ -622,6 +632,7 @@ select.form-input{cursor:pointer}
           <div class="cb-group">
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="program" onchange="updateChip(this)"> Recent Program</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="programyr" onchange="updateChip(this)"> Program Year</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="studentyearprogram" onchange="updateChip(this)"> Student Year / Program</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="military" onchange="updateChip(this)"> Military Status</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="housing" onchange="updateChip(this)"> LLC Housing</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="postprog" onchange="updateChip(this)"> Post-Program</label>
@@ -630,10 +641,8 @@ select.form-input{cursor:pointer}
           <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Relationships</div>
           <div class="cb-group">
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="children" onchange="updateChip(this)"> Student / Child Name</label>
-            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parent" onchange="updateChip(this)"> Parent / Guardian Name</label>
-            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parentphone" onchange="updateChip(this)"> Parent Phone</label>
-            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parentemail" onchange="updateChip(this)"> Parent Email</label>
-            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parentaddress" onchange="updateChip(this)"> Parent Address</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parent1" onchange="updateChip(this)"> Parent / Guardian 1 — Full Contact</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="parent2" onchange="updateChip(this)"> Parent / Guardian 2 — Full Contact</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="spouse" onchange="updateChip(this)"> Spouse/Partner</label>
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Other</div>
@@ -1289,7 +1298,7 @@ function showTab(name){
   });
   document.getElementById('ledger-section').style.display='none';
   const ps=document.getElementById('persistent-search');if(ps)ps.style.display='none';
-  if(name==='queries'&&contactRows.length){ initLocationUI(); initYearDropdown(); }
+  if(name==='queries'&&contactRows.length){ initLocationUI(); initYearDropdown(); initEducationalOptions(); }
   if(name==='reports'){ resetReportsPanels(); }
 }
 
@@ -2656,6 +2665,101 @@ function onStateChange(cb){
   else selectedStates.delete(cb.value);
 }
 
+let selectedEduYears=new Set();
+let selectedEduPrograms=new Set();
+
+function normalizeProgramChoice(value){
+  const s=String(value||'').replace(/^parent\s*-\s*/i,'').trim();
+  const l=s.toLowerCase();
+  if(!l)return'';
+  if(l.includes('room & board'))return'LLC: Room & Board';
+  if(l.includes('alef ml'))return'Alef ML';
+  if(l.includes('alef lh'))return'Alef LH';
+  if(l.includes('shana bet'))return'Bet: Shana Bet';
+  if(/\bbet\b/.test(l)&&l.includes('llc'))return'Bet: LLC';
+  if(/\bkollel\b/.test(l))return'Kollel';
+  if(/\bulpan\b/.test(l))return'Ulpan';
+  if(/\bgimmel\b/.test(l))return'Gimmel';
+  if(/\bdalet\b/.test(l))return'Dalet';
+  if(/\bheh\b/.test(l))return'Heh';
+  if(/\bbet\b/.test(l))return'Bet';
+  if(/\balef\b/.test(l))return'Alef';
+  if(/\bllc\b/.test(l))return'LLC';
+  return s;
+}
+
+function studentProgramEntries(row){
+  const history=get(row,studentHdr,'programhistory')||'';
+  const entries=[];
+  String(history).split(/\s+\/\s+/).forEach(raw=>{
+    const text=raw.trim();
+    if(!text)return;
+    const ym=text.match(/\b(20\d{2}\/\d{2}|20\d{2})\b/);
+    const year=ym?ym[1]:'';
+    const program=normalizeProgramChoice(text.replace(/\b20\d{2}(?:\/\d{2})?\b/,'').trim());
+    if(year||program)entries.push({year,program,raw:text});
+  });
+  if(!entries.length){
+    const year=get(row,studentHdr,'mostrecentyear')||'';
+    const program=normalizeProgramChoice(get(row,studentHdr,'mostrecentprogram')||'');
+    if(year||program)entries.push({year,program,raw:[year,program].filter(Boolean).join(' ')});
+  }
+  return entries;
+}
+
+function eduYearLabel(year){
+  const start=parseInt(String(year).slice(0,4),10);
+  return Number.isFinite(start)&&start>=2002?`Yr ${start-2001} — ${year}`:year;
+}
+
+function initEducationalOptions(){
+  const yearDrop=document.getElementById('qe-years-dropdown');
+  const programDrop=document.getElementById('qe-programs-dropdown');
+  if(!yearDrop||!programDrop)return;
+  const years=new Set(),programs=new Set();
+  studentRows.forEach(sr=>studentProgramEntries(sr).forEach(e=>{
+    if(/^\d{4}\/\d{2}$/.test(e.year))years.add(e.year);
+    if(e.program)programs.add(e.program);
+  }));
+  const sortedYears=[...years].sort((a,b)=>a.localeCompare(b));
+  const programOrder=['Alef','Alef LH','Alef ML','Bet','Bet: Shana Bet','Bet: LLC','LLC','LLC: Room & Board','Gimmel','Dalet','Heh','Kollel','Ulpan'];
+  const sortedPrograms=[...programs].sort((a,b)=>{
+    const ai=programOrder.indexOf(a),bi=programOrder.indexOf(b);
+    if(ai>=0||bi>=0)return(ai<0?999:ai)-(bi<0?999:bi);
+    return a.localeCompare(b);
+  });
+  yearDrop.innerHTML=sortedYears.map(y=>`<label class="edu-multi-option"><input type="checkbox" value="${y}" ${selectedEduYears.has(y)?'checked':''} onchange="updateEduSelection('years',this)"> ${eduYearLabel(y)}</label>`).join('');
+  programDrop.innerHTML=sortedPrograms.map(p=>`<label class="edu-multi-option"><input type="checkbox" value="${p.replace(/"/g,'&quot;')}" ${selectedEduPrograms.has(p)?'checked':''} onchange="updateEduSelection('programs',this)"> ${p}</label>`).join('');
+  renderEduSelectionLabels();
+}
+
+function toggleEduDropdown(kind,event){
+  if(event)event.stopPropagation();
+  const target=document.getElementById(`qe-${kind}-dropdown`);
+  const other=document.getElementById(kind==='years'?'qe-programs-dropdown':'qe-years-dropdown');
+  if(other)other.style.display='none';
+  if(target)target.style.display=target.style.display==='block'?'none':'block';
+}
+
+function updateEduSelection(kind,cb){
+  const set=kind==='years'?selectedEduYears:selectedEduPrograms;
+  if(cb.checked)set.add(cb.value);else set.delete(cb.value);
+  renderEduSelectionLabels();
+}
+
+function renderEduSelectionLabels(){
+  const yl=document.getElementById('qe-years-label');
+  const pl=document.getElementById('qe-programs-label');
+  if(yl)yl.textContent=selectedEduYears.size===0?'Any academic year':selectedEduYears.size===1?eduYearLabel([...selectedEduYears][0]):`${selectedEduYears.size} academic years selected`;
+  if(pl)pl.textContent=selectedEduPrograms.size===0?'Any program':selectedEduPrograms.size===1?[...selectedEduPrograms][0]:`${selectedEduPrograms.size} programs selected`;
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.edu-multi-wrap')){
+    ['qe-years-dropdown','qe-programs-dropdown'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  }
+});
+
 // MAIN QUERY RUNNER
 function runQuery(){
   const btn=document.getElementById('q-run-btn');
@@ -2696,10 +2800,6 @@ function _doRunQuery(){
   const lifeB=parseFloat(document.getElementById('qf-life-b').value)||0;
   const pledgeFilter=document.getElementById('qf-pledge').value;
   const tuiFilter=document.getElementById('qf-tui').value;
-  const yrFrom=parseInt(document.getElementById('qe-yr-from').value)||0;
-  const yrTo=parseInt(document.getElementById('qe-yr-to').value)||0;
-  const progText=(document.getElementById('qe-prog').value||'').toLowerCase().trim();
-  const progText2=(document.getElementById('qe-prog2').value||'').toLowerCase().trim();
   const qeArmy=document.getElementById('qe-army')&&document.getElementById('qe-army').checked;
   const qeLLC=document.getElementById('qe-llc')&&document.getElementById('qe-llc').checked;
   const qeBet=document.getElementById('qe-bet')&&document.getElementById('qe-bet').checked;
@@ -2847,7 +2947,7 @@ function _doRunQuery(){
     if(tuiFilter==='yes'&&!tuiOvByAcct.has(acctId)) return;
 
     // ── Educational ──
-    const needsEd=yrFrom||yrTo||progText||progText2||qeArmy||qeLLC||qeBet||qeHousing;
+    const needsEd=selectedEduYears.size||selectedEduPrograms.size||qeArmy||qeLLC||qeBet||qeHousing;
     if(needsEd){
       const ownSIs=studentByAcct.get(acctId)||[];
       const childSIs=relatedStudentIndexesForAccount(acctId);
@@ -2857,7 +2957,6 @@ function _doRunQuery(){
         const sr=studentRows[si];
         const status=get(sr,studentHdr,'status')||'';
         if(NON_STUDENT_STATUSES.has(status)) return false;
-        const yr=parseInt(get(sr,studentHdr,'mostrecentyear'))||0;
         const prog=(get(sr,studentHdr,'programhistory')||'').toLowerCase();
         const rprog=(get(sr,studentHdr,'mostrecentprogram')||'').toLowerCase();
         const allProg=prog+' '+rprog;
@@ -2867,8 +2966,15 @@ function _doRunQuery(){
         const housingStart=(get(sr,studentHdr,'llc housing starting date')||'').trim();
         const hasHousing=!!(housingTag||housingStart);
         let ok=true;
-        if(yrFrom&&yr<yrFrom) ok=false;
-        if(yrTo&&yr>yrTo) ok=false;
+        const entries=studentProgramEntries(sr);
+        if(selectedEduYears.size||selectedEduPrograms.size){
+          const entryMatch=entries.some(e=>{
+            const yearOk=selectedEduYears.size===0||selectedEduYears.has(e.year);
+            const programOk=selectedEduPrograms.size===0||selectedEduPrograms.has(e.program);
+            return yearOk&&programOk;
+          });
+          if(!entryMatch)ok=false;
+        }
         // Army: military status is non-empty and not blank/NA
         if(qeArmy&&(!mil||mil==='n/a'||mil==='no'||mil==='none')) ok=false;
         // LLC: did idf through llc column is yes/true, OR program contains LLC
@@ -2877,14 +2983,6 @@ function _doRunQuery(){
         if(qeBet&&!allProg.includes('bet')&&!allProg.includes('llc')) ok=false;
         // LLC Housing only: has housing tag or start date
         if(qeHousing&&!hasHousing) ok=false;
-        // Program text (OR logic between two terms)
-        if(progText||progText2){
-          const t1ok=progText&&(allProg.includes(progText));
-          const t2ok=progText2&&(allProg.includes(progText2));
-          if(progText&&progText2){if(!t1ok&&!t2ok)ok=false;}
-          else if(progText&&!t1ok)ok=false;
-          else if(progText2&&!t2ok)ok=false;
-        }
         return ok;
       });
       if(!passEd) return;
@@ -2912,14 +3010,15 @@ function relationshipFamilyRole(label){
 function familyMembersForAccount(acctId,role){
   const ai=normId(acctId);
   const found=new Map();
-  const add=(id,name,studentIndex)=>{
+  const add=(id,name,studentIndex,relationship)=>{
     const oid=normId(id);
     const key=oid||String(name||'').trim().toLowerCase();
     if(!key)return;
     const ci=oid?contactByAcct.get(oid):undefined;
     const contactName=ci!==undefined?get(contactRows[ci],contactHdr,'name'):'';
     const studentName=studentIndex!==undefined?get(studentRows[studentIndex],studentHdr,'name'):'';
-    if(!found.has(key))found.set(key,{id:oid,name:contactName||studentName||name||'',ci,studentIndex});
+    if(!found.has(key))found.set(key,{id:oid,name:contactName||studentName||name||'',ci,studentIndex,relationship:relationship||''});
+    else if(relationship&&!found.get(key).relationship)found.get(key).relationship=relationship;
   };
 
   (relByAcct.get(ai)||[]).forEach(ri=>{
@@ -2927,23 +3026,24 @@ function familyMembersForAccount(acctId,role){
     const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;
     const relType=get(rr,relHdr,'relationshiptype');
     if(!isFamilyRelationshipType(relType))return;
-    const otherRole=relationshipFamilyRole(relationshipSideLabel(relType,isA));
+    const relationship=relationshipSideLabel(relType,isA);
+    const otherRole=relationshipFamilyRole(relationship);
     if(otherRole!==role)return;
     const oid=normId(get(rr,relHdr,isA?'personb_accountid':'persona_accountid'));
     const on=get(rr,relHdr,isA?'personb_name':'persona_name');
     const sis=oid?(studentByAcct.get(oid)||[]):[];
-    add(oid,on,sis.length?sis[0]:undefined);
+    add(oid,on,sis.length?sis[0]:undefined,relationship);
   });
 
   if(role==='parent'){
     (studentByAcct.get(ai)||[]).forEach(si=>{
       const sr=studentRows[si];
-      add(get(sr,studentHdr,'parent_accountid'),get(sr,studentHdr,'parent_name'),undefined);
+      add(get(sr,studentHdr,'parent_accountid'),get(sr,studentHdr,'parent_name'),undefined,'Parent / Guardian');
     });
   }else if(role==='child'){
     (studentByAcct.get('p:'+ai)||[]).forEach(si=>{
       const sr=studentRows[si];
-      add(get(sr,studentHdr,'accountid'),get(sr,studentHdr,'name'),si);
+      add(get(sr,studentHdr,'accountid'),get(sr,studentHdr,'name'),si,'Student / Child');
     });
   }
   return[...found.values()];
@@ -2978,6 +3078,61 @@ function familyMemberValue(acctId,role,field){
     String(v||'').split(';').map(x=>x.trim()).filter(Boolean).forEach(x=>{if(!vals.includes(x))vals.push(x);});
   });
   return vals.join('; ');
+}
+
+function familyMemberContact(acctId,role,index){
+  const m=familyMembersForAccount(acctId,role)[index];
+  if(!m)return'';
+  let phone='',email='',address='';
+  if(m.ci!==undefined){
+    const cr=contactRows[m.ci];
+    phone=get(cr,contactHdr,'phone');
+    email=get(cr,contactHdr,'email');
+    address=contactAddressText(cr);
+  }
+  if(m.studentIndex!==undefined){
+    const sr=studentRows[m.studentIndex];
+    if(!phone)phone=[get(sr,studentHdr,'phone1'),get(sr,studentHdr,'phone2')].filter(Boolean).join('; ');
+    if(!email)email=get(sr,studentHdr,'email');
+    if(!address)address=[get(sr,studentHdr,'address'),get(sr,studentHdr,'city'),get(sr,studentHdr,'state')].filter(Boolean).join(', ');
+  }
+  const label=m.relationship&&m.relationship.toLowerCase()!=='parent / guardian'?m.relationship:'Parent / Guardian';
+  return[
+    `${label}: ${m.name||'(name missing)'}`,
+    phone&&`Phone: ${phone}`,
+    email&&`Email: ${email}`,
+    address&&`Address: ${address}`
+  ].filter(Boolean).join(' | ');
+}
+
+function studentYearProgramValue(acctId){
+  const ai=normId(acctId);
+  const own=studentByAcct.get(ai)||[];
+  const children=relatedStudentIndexesForAccount(ai);
+  const indexes=[...new Set([...own,...children])];
+  const includeName=indexes.length>1||children.length>0;
+  const values=[];
+  indexes.forEach(si=>{
+    const sr=studentRows[si];
+    let entries=studentProgramEntries(sr);
+    if(selectedEduYears.size||selectedEduPrograms.size){
+      entries=entries.filter(e=>
+        (selectedEduYears.size===0||selectedEduYears.has(e.year))&&
+        (selectedEduPrograms.size===0||selectedEduPrograms.has(e.program))
+      );
+    }else{
+      const recentYear=get(sr,studentHdr,'mostrecentyear')||'';
+      const recentProgram=normalizeProgramChoice(get(sr,studentHdr,'mostrecentprogram')||'');
+      entries=[{year:recentYear,program:recentProgram}];
+    }
+    const name=get(sr,studentHdr,'name')||'Student';
+    entries.forEach(e=>{
+      const detail=[e.year,e.program].filter(Boolean).join(' — ');
+      const value=(includeName?name+': ':'')+detail;
+      if(value&&!values.includes(value))values.push(value);
+    });
+  });
+  return values.join('; ');
 }
 
 function contactRecordStatus(row){
@@ -3019,15 +3174,14 @@ const Q_COL_DEFS={
   dedtext:    {label:'Has Text',    fn:(r,x)=>{const ids=dedByAcct.get(normId(get(r,contactHdr,'accountid')))||[];return ids.length?(ids.some(di=>(get(dedRows[di],dedHdr,'dedication text')||'').trim())?'✓ Yes':'✗ No'):''}},
   program:    {label:'Program',     fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.length?get(studentRows[sis[0]],studentHdr,'mostrecentprogram'):''}},
   programyr:  {label:'Prog. Year',  fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.length?get(studentRows[sis[0]],studentHdr,'mostrecentyear'):''}},
+  studentyearprogram:{label:'Student Year / Program',fn:(r,x)=>studentYearProgramValue(get(r,contactHdr,'accountid'))},
   military:   {label:'Military',    fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'militarystatus')).filter(Boolean).join(', ')}},
   housing:    {label:'Housing',     fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'housingtag')).filter(Boolean).join(', ')}},
   postprog:   {label:'Post-Prog',   fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'postprogram')).filter(Boolean).join(', ')}},
   hesder:     {label:'Hesder',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const sis=[...(studentByAcct.get(ai)||[]),...(studentByAcct.get('p:'+ai)||[])];return sis.map(si=>get(studentRows[si],studentHdr,'hesder')).filter(Boolean).join(', ')}},
   children:   {label:'Student / Child',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'child','name')},
-  parent:     {label:'Parent / Guardian',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','name')},
-  parentphone:{label:'Parent Phone',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','phone')},
-  parentemail:{label:'Parent Email',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','email')},
-  parentaddress:{label:'Parent Address',fn:(r,x)=>familyMemberValue(get(r,contactHdr,'accountid'),'parent','address')},
+  parent1:    {label:'Parent / Guardian 1',fn:(r,x)=>familyMemberContact(get(r,contactHdr,'accountid'),'parent',0)},
+  parent2:    {label:'Parent / Guardian 2',fn:(r,x)=>familyMemberContact(get(r,contactHdr,'accountid'),'parent',1)},
   spouse:     {label:'Spouse',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('spouse')||rt.includes('wife')||rt.includes('husband')||rt.includes('partner')){out=get(rr,relHdr,isA?'personb_name':'persona_name');}});return out}},
   yahrtzeit:  {label:'Yahrtzeit',   fn:(r,x)=>{const m=get(r,contactHdr,'yahrtzeit month');const d=get(r,contactHdr,'yahrtzeit day of month');const f=get(r,contactHdr,'yahrtzeit for');return(m?(d?d+' '+m:m):'')+(f?' · '+f:'');}},
 };
@@ -3262,12 +3416,13 @@ function clearQuery(){
     cb.checked=false; cb.closest('.cb-chip')&&cb.closest('.cb-chip').classList.remove('checked');
   });
   ['q-action-filter','q-action-month','q-action-year','qf-life-op','qf-commit-op','qf-pledge','qf-tui'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  ['q-action-text','q-text','qf-life-a','qf-life-b','qf-commit-a','qf-commit-b','qf-given-yrs','qe-yr-from','qe-yr-to','qe-prog','qe-prog2','sol-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['q-action-text','q-text','qf-life-a','qf-life-b','qf-commit-a','qf-commit-b','qf-given-yrs','sol-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('qf-commit-and').style.display='none';
   document.getElementById('qf-commit-b').style.display='none';
   document.getElementById('qf-life-and').style.display='none';
   document.getElementById('qf-life-b').style.display='none';
   selectedSolicitors.clear(); renderSolChips();
+  selectedEduYears.clear();selectedEduPrograms.clear();initEducationalOptions();
   selectedCountries.clear(); selectedStates.clear();
   if(locationMap) renderStateOptions();
   document.getElementById('q-results').style.display='none';
