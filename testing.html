@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LHT Donor Manager</title>
 <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -879,22 +880,21 @@ select.form-input{cursor:pointer}
   <div id="tab-sync-content" style="display:none">
     <div class="card">
       <div class="section-head">🔄 Weekly Admire Update</div>
-      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Choose the type of Admire export, attach its CSV, and compare it with the correct master tab. The app will identify new, existing, and unresolved records before anything is imported.</p>
-      <label class="form-label">Admire export type</label>
-      <select class="form-input" id="sync-type" onchange="clearSyncResultsOnly()">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:8px">Attach the complete, untouched Admire Excel or CSV report—no column editing or cleanup is needed. The app recognizes the report, maps its fields, separates safe imports from duplicates and review items, and shows the result before anything is written.</p>
+      <p style="font-size:12px;color:var(--gray-500);margin-bottom:14px"><b>Weekly workflow:</b> upload the Contacts report, import its safe rows, then do the same for Pledges and Payments. The app handles the details inside each complete file.</p>
+      <label class="form-label">Detected report type</label>
+      <select class="form-input" id="sync-type" onchange="clearSyncResultsOnly()" disabled>
         <option value="contacts">Contacts and contact information</option>
-        <option value="donations">Donations and payments</option>
-        <option value="relationships">Relationships</option>
-        <option value="tuition">Tuition payments</option>
-        <option value="enrollments">Students and enrollments</option>
-        <option value="solicitors">Solicitor assignments</option>
+        <option value="pledges">Pledges and commitments</option>
+        <option value="payments">Received payments and allocations</option>
       </select>
-      <label class="form-label" style="margin-top:12px">Upload Admire CSV</label>
+      <label class="form-label" style="margin-top:12px">Attach original Admire report</label>
       <div id="sync-drop" style="border:2px dashed var(--gray-300);border-radius:var(--radius);padding:24px 16px;text-align:center;cursor:pointer;margin-top:4px" onclick="document.getElementById('sync-file').click()" ondragover="event.preventDefault()" ondrop="syncDrop(event)">
         <div style="font-size:26px;margin-bottom:6px">📂</div>
+        <div style="font-size:12px;color:var(--gray-500)">Drop the complete report here, or click to choose it</div>
         <div id="sync-fname" style="font-size:12px;color:var(--blue);margin-top:6px;display:none"></div>
       </div>
-      <input type="file" id="sync-file" accept=".csv" style="display:none" onchange="syncFileChosen(this)" />
+      <input type="file" id="sync-file" accept=".xls,.xlsx,.csv,text/csv" style="display:none" onchange="syncFileChosen(this)" />
       <div class="btn-row" style="margin-top:12px">
         <button class="btn btn-primary" onclick="runSync()">Compare with sheet</button>
         <button class="btn" onclick="clearSync()">Clear</button>
@@ -3619,20 +3619,56 @@ async function saveNewContact(){
 // ─── SYNC TAB ─────────────────────────────────────────────────────────────────
 const SYNC_TYPES={
   contacts:{label:'contacts',tab:TAB.CONTACTS,keyAliases:['AccountID','ACT_ID'],contactAliases:['AccountID','ACT_ID']},
-  donations:{label:'payments',tab:TAB.DON_DETAIL,keyAliases:['PMT_ID'],contactAliases:['PayerACT_ID','ACT_ID']},
-  relationships:{label:'relationships',tab:TAB.RELATIONSHIPS,keyAliases:['RelationshipID','REL_ID'],contactAliases:['PersonA_AccountID','ACT_ID']},
-  tuition:{label:'tuition payments',tab:TAB.TUI_DETAIL,keyAliases:['PMT_ID'],contactAliases:['PayerACT_ID','ACT_ID']},
-  enrollments:{label:'enrollments',tab:'Enrollments',keyAliases:['EnrollmentID','ENR_ID','AdmireStudentRecordID','STD_ID'],contactAliases:['AccountID','ACT_ID','StudentAccountID']},
-  solicitors:{label:'solicitor assignments',tab:'Solicitor_Data_FROM_ADMIRE',keyAliases:['AccountID','ACT_ID'],contactAliases:['AccountID','ACT_ID']}
+  pledges:{label:'pledges',tab:'Admire_Pledges',keyAliases:['PLG_ID'],contactAliases:['ACT_ID','PLG_ACT_ID']},
+  payments:{label:'payment allocations',tab:TAB.DON_DETAIL,keyAliases:['PMT_ID'],contactAliases:['ACT_ID','PMT_ACT_ID']}
 };
-let syncParsed=[],syncNew=[];
+const ADMIRE_OCCASION_RULES=new Map([
+  ['Basketball Court Rental',{classification:'Exclude — not a donation'}],
+  ['Book Printing',{classification:'Exclude — not a donation'}],
+  ['Chayal Champion',{classification:'Donation',note:'Donation and dedication campaign'}],
+  ["Elnatan's Talk 2026",{classification:'Donation'}],
+  ['Equipment - External',{classification:'Donation',note:'Restricted/covered-expense donation; kept separate by occasion'}],
+  ['Facility Rental',{classification:'Exclude — not a donation'}],
+  ["Giva'ot Eden",{classification:'Exclude — not a donation'}],
+  ['Israel Alumni Event 2026',{classification:'Donation'}],
+  ['LLR Shabbat Chayal Teaneck Beth Aaron 2026',{classification:'Donation'}],
+  ['ML Chagigot Nigunim',{classification:'Exclude — not a donation'}],
+  ['Payments',{classification:'Exclude — not a donation'}],
+  ["Rav Shimshon's Project",{classification:'Donation',note:'Restricted/covered-expense donation; kept separate by occasion'}],
+  ['Staff Appreciation',{classification:'Donation'}],
+  ['Tchelet',{classification:'Exclude — not a donation'}]
+].map(([name,rule])=>[occasionKey(name),rule]));
+let syncParsed=[],syncNew=[],syncExisting=[],syncReview=[],syncIgnored=[],syncDedicationPending=[],syncDetectedType='';
 function syncDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)loadSyncFile(f);}
 function syncFileChosen(input){if(input.files[0])loadSyncFile(input.files[0]);}
 function loadSyncFile(file){
   const fn=document.getElementById('sync-fname');fn.textContent='📄 '+file.name;fn.style.display='block';
   const reader=new FileReader();
-  reader.onload=e=>{syncParsed=parseCSV(e.target.result);clearSyncResultsOnly();showMsg('sync-msg',`✓ Loaded ${syncParsed.length} rows from ${file.name}`,'success');};
-  reader.readAsText(file);
+  reader.onload=e=>{
+    try{
+      if(/\.csv$/i.test(file.name))syncParsed=parseCSV(new TextDecoder('utf-8').decode(e.target.result));
+      else{
+        if(!window.XLSX)throw new Error('Excel reader did not load. Refresh and try again.');
+        const wb=XLSX.read(e.target.result,{type:'array',raw:false});
+        if(!wb.SheetNames.length)throw new Error('No worksheet was found.');
+        syncParsed=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+      }
+      syncDetectedType=detectAdmireReport(syncParsed);
+      if(!syncDetectedType)throw new Error('This file does not match the Admire Contacts, Pledges, or Payments layouts.');
+      document.getElementById('sync-type').value=syncDetectedType;
+      clearSyncResultsOnly();
+      showMsg('sync-msg',`✓ Recognized ${syncParsed.length} ${SYNC_TYPES[syncDetectedType].label}.`,'success');
+    }catch(err){syncParsed=[];showMsg('sync-msg','Could not read report: '+err.message,'error');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function detectAdmireReport(rows){
+  if(!rows.length)return'';
+  const k=new Set(Object.keys(rows[0]).map(x=>x.trim().toUpperCase()));
+  if(k.has('ACT_ID')&&k.has('ADR_ID')&&k.has('SYSTEMDISPLAY1')&&!k.has('PMT_ID')&&!k.has('PLG_ID'))return'contacts';
+  if(k.has('PLG_ID')&&k.has('PLG_AMOUNT')&&k.has('OCC_NAME'))return'pledges';
+  if(k.has('PMT_ID')&&k.has('APPLIEDTO')&&k.has('APPLIEDAMOUNT'))return'payments';
+  return'';
 }
 function parseCSV(text){
   const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];
@@ -3645,21 +3681,22 @@ function parseCSVLine(line){
   res.push(cur);return res;
 }
 async function runSync(){
-  if(!syncParsed.length){showMsg('sync-msg','Please upload a CSV file first.','error');return;}
+  if(!syncParsed.length){showMsg('sync-msg','Please attach an Admire Excel or CSV report first.','error');return;}
   const type=document.getElementById('sync-type').value;
+  if(syncDetectedType&&type!==syncDetectedType){showMsg('sync-msg',`This file is the ${SYNC_TYPES[syncDetectedType].label} report.`,'error');return;}
   const cfg=SYNC_TYPES[type];
   if(!cfg){showMsg('sync-msg','Choose an Admire export type.','error');return;}
-  if(isDemo){processSyncResults(new Set(['12236','18809']),cfg);return;}
+  if(type==='payments'){await runPaymentSync();return;}
   showMsg('sync-msg',`Checking existing ${cfg.label}…`,'info');
   const existing=new Set();
   try{
     const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(cfg.tab)}`;
     const res=await authedFetch(url);
-    if(!res.ok)throw new Error(`Could not read ${cfg.tab}.`);
-    const d=await res.json(),values=d.values||[],headers=values[0]||[],h=hdr(headers);
-    const keyCol=cfg.keyAliases.map(k=>col(h,k)).find(i=>i>=0);
-    if(keyCol===undefined)throw new Error(`No supported record ID column was found in ${cfg.tab}.`);
-    values.slice(1).forEach(r=>{const id=normId(r[keyCol]);if(id)existing.add(id);});
+    if(res.ok){
+      const d=await res.json(),values=d.values||[],h=hdr(values[0]||[]);
+      const keyCol=cfg.keyAliases.map(k=>col(h,k)).find(i=>i>=0);
+      if(keyCol!==undefined)values.slice(1).forEach(r=>{const id=normId(r[keyCol]);if(id)existing.add(id);});
+    }else if(type!=='pledges')throw new Error(`Could not read ${cfg.tab}.`);
   }catch(e){showMsg('sync-msg',e.message,'error');return;}
   processSyncResults(existing,cfg);
 }
@@ -3669,38 +3706,225 @@ function syncRowTitle(row,cfg){
 }
 function processSyncResults(existing,cfg){
   const knownIds=new Set(contactRows.map(r=>normId(get(r,contactHdr,'accountid'))));
-  syncNew=[];const dupes=[],unknown=[];
+  syncNew=[];syncExisting=[];syncReview=[];syncIgnored=[];
   syncParsed.forEach(row=>{
     const recordId=firstRowValue(row,cfg.keyAliases);
     const contactId=firstRowValue(row,cfg.contactAliases);
-    if(!recordId){unknown.push({...row,_reason:'Missing supported record ID'});}
-    else if(existing.has(recordId))dupes.push(row);
-    else if(cfg!==SYNC_TYPES.contacts&&contactId&&!knownIds.has(contactId))unknown.push({...row,_reason:`Unknown AccountID ${contactId}`});
+    if(!recordId)syncReview.push({...row,_reason:'Missing supported record ID'});
+    else if(existing.has(recordId)&&cfg===SYNC_TYPES.contacts){
+      const ci=contactByAcct.get(recordId),mapped=contactImportValues(row),changes={};
+      if(ci!==undefined)Object.entries(mapped).forEach(([field,value])=>{
+        if(field==='data source'||field==='solicitor 1'||!String(value||'').trim())return;
+        if(String(get(contactRows[ci],contactHdr,field)||'').trim()!==String(value).trim())changes[field]=value;
+      });
+      if(Object.keys(changes).length)syncNew.push({...row,_updateCi:ci,_contactChanges:changes});
+      else syncExisting.push(row);
+    }
+    else if(existing.has(recordId))syncExisting.push(row);
+    else if(cfg!==SYNC_TYPES.contacts&&contactId&&!knownIds.has(contactId))syncReview.push({...row,_reason:`Unknown AccountID ${contactId}; import Contacts first.`});
     else syncNew.push(row);
   });
+  renderSyncResults(cfg);
+}
+function renderSyncResults(cfg){
   const res=document.getElementById('sync-results');res.style.display='block';
+  const dedicationAdds=syncDedicationPending.filter(r=>r._dedicationAction==='add').length;
+  const dedicationReviews=syncDedicationPending.filter(r=>r._dedicationAction==='review').length;
   res.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
-      <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--green)">${syncNew.length}</div><div style="font-size:11px;color:var(--green)">New</div></div>
-      <div style="background:var(--gray-200);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--gray-700)">${dupes.length}</div><div style="font-size:11px">Duplicate</div></div>
-      <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--amber)">${unknown.length}</div><div style="font-size:11px;color:var(--amber)">Unknown</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+      <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${syncNew.length}</div><div style="font-size:10px">Safe import</div></div>
+      <div style="background:var(--gray-200);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700">${syncExisting.length}</div><div style="font-size:10px">Already present</div></div>
+      <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--amber)">${syncReview.length}</div><div style="font-size:10px">Needs review</div></div>
+      <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700">${syncIgnored.length}</div><div style="font-size:10px">Ignored</div></div>
     </div>
+    ${cfg===SYNC_TYPES.payments&&(dedicationAdds||dedicationReviews)?`<div class="card" style="border-left:4px solid var(--amber)">
+      <div class="section-head">🕯️ Chayal Champion dedication handling</div>
+      <div style="font-size:12px;line-height:1.55;color:var(--gray-600)">
+        ${dedicationAdds} new payment${dedicationAdds===1?'':'s'} can be added to Dedications; ${dedicationReviews} payment${dedicationReviews===1?'':'s'} will go to Dedication_Import_Review because an existing dedication differs or cannot be matched exactly.
+        Existing dedication text is never overwritten.
+      </div>
+      ${!syncNew.length?`<div class="btn-row"><button class="btn btn-primary" onclick="processDedicationQueue()">Process dedication items</button></div><div id="sync-write-msg" class="msg"></div>`:''}
+    </div>`:''}
     ${syncNew.length?`<div class="card"><div class="section-head">🟢 New ${escapeHtml(cfg.label)} to review</div>
-    ${syncNew.map((row,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200);cursor:pointer"><input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" style="accent-color:var(--blue)" /><div style="flex:1;font-size:12px"><div style="font-weight:600">${escapeHtml(syncRowTitle(row,cfg))}</div><div style="color:var(--gray-500)">${escapeHtml(csvValue(row,'Date')||csvValue(row,'PMT_DateNoTime')||firstRowValue(row,cfg.keyAliases))}</div></div></label>`).join('')}
-    <div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="downloadSyncNewCSV()">Download selected for review</button></div><div id="sync-write-msg" class="msg"></div></div>`:`<div class="card" style="font-size:13px;color:var(--gray-500)">No new ${escapeHtml(cfg.label)} found.</div>`}
-    ${unknown.length?`<div class="card"><div class="section-head">🟡 Unresolved records (${unknown.length})</div>${unknown.slice(0,10).map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-200)"><b>${escapeHtml(syncRowTitle(r,cfg))}</b> · ${escapeHtml(r._reason||'Needs review')}</div>`).join('')}${unknown.length>10?`<div style="font-size:11px;color:var(--gray-500);padding-top:6px">…and ${unknown.length-10} more</div>`:''}</div>`:''}`;
+    ${syncNew.slice(0,100).map((row,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200)"><input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" /><div style="font-size:12px"><b>${escapeHtml(syncRowTitle(row,cfg))}</b><div style="color:var(--gray-500)">${escapeHtml(csvValue(row,'Date')||csvValue(row,'PLG_Date')||csvValue(row,'PMT_DateNoTime')||firstRowValue(row,cfg.keyAliases))}</div></div></label>`).join('')}
+    ${syncNew.length>100?`<div style="font-size:11px;color:var(--gray-500)">…and ${syncNew.length-100} more</div>`:''}
+    <div class="btn-row"><button class="btn btn-primary" onclick="applyAdmireSync()">Import selected</button><button class="btn" onclick="downloadSyncNewCSV()">Download review CSV</button></div><div id="sync-write-msg" class="msg"></div></div>`:''}
+    ${syncReview.length?`<div class="card"><div class="section-head">🟡 Needs review (${syncReview.length})</div>${syncReview.slice(0,12).map(r=>`<div style="font-size:11px;padding:4px 0"><b>${escapeHtml(syncRowTitle(r,cfg))}</b> · ${escapeHtml(r._reason||'Needs review')}</div>`).join('')}<button class="btn btn-sm" onclick="downloadSyncReviewCSV()">Download review items</button></div>`:''}`;
   hideMsg('sync-msg');
+}
+function normalizeOccasion(s){return String(s||'').replace(/\[~\d+~\]/g,'').replace(/[‘’]/g,"'").replace(/[–—]/g,'-').replace(/\s+/g,' ').trim();}
+function occasionKey(s){return normalizeOccasion(s).toLowerCase();}
+function splitPaymentAllocations(row){
+  const text=String(csvValue(row,'AppliedTo')||''),out=[];const re=/(.*?)(?:\(\$(-?[\d,]+(?:\.\d+)?)\))(?:,\s*|$)/g;let m;
+  while((m=re.exec(text)))out.push({...row,_occasion:normalizeOccasion(m[1].replace(/^,\s*/,'')),_amount:parseFloat(m[2].replace(/,/g,''))||0});
+  return out.length?out:[{...row,_occasion:normalizeOccasion(csvValue(row,'PrimaryOccasion')),_amount:parseFloat(csvValue(row,'AppliedAmount'))||0}];
+}
+async function runPaymentSync(){
+  showMsg('sync-msg','Splitting allocations and checking classifications…','info');
+  try{
+    const [dres,cres,dedRes,reviewRes]=await Promise.all([
+      authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.DON_DETAIL)}!A:G`),
+      authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Donation_Classification!A:C`),
+      authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Dedications!A:N`),
+      authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Dedication_Import_Review!A:L`)
+    ]);
+    if(!dres.ok||!cres.ok||!dedRes.ok)throw new Error('Could not read donation, classification, or dedication data.');
+    const dv=(await dres.json()).values||[],cv=(await cres.json()).values||[],dedv=(await dedRes.json()).values||[];
+    const reviewv=reviewRes.ok?((await reviewRes.json()).values||[]):[];
+    const existing=new Set(dv.slice(1).map(r=>`${normId(r[0])}|${occasionKey(r[5])}|${Number(r[6]||0).toFixed(2)}`));
+    const classes=new Map(cv.slice(1).map(r=>[occasionKey(r[0]),{classification:String(r[1]||''),note:String(r[2]||'')}]));
+    syncNew=[];syncExisting=[];syncReview=[];syncIgnored=[];syncDedicationPending=[];
+    syncParsed.flatMap(splitPaymentAllocations).forEach(row=>{
+      const id=normId(csvValue(row,'PMT_ID')),occKey=occasionKey(row._occasion),key=`${id}|${occKey}|${Number(row._amount).toFixed(2)}`;
+      const decision=ADMIRE_OCCASION_RULES.get(occKey)||classes.get(occKey)||{classification:'',note:''},cls=decision.classification||'';
+      row._classification=cls;row._classificationNote=decision.note||'';
+      if(occKey===occasionKey('Chayal Champion')&&!/pending|expected/i.test(String(csvValue(row,'Method')||''))){
+        const plan=planDedicationImport(row,dedv,reviewv);
+        Object.assign(row,plan);
+        if(plan._dedicationAction==='add'||plan._dedicationAction==='review')syncDedicationPending.push(row);
+      }
+      if(!id)syncReview.push({...row,_reason:'Missing PMT_ID'});
+      else if(existing.has(key))syncExisting.push(row);
+      else if(/pending|expected/i.test(String(csvValue(row,'Method')||'')))syncIgnored.push({...row,_reason:'Pending/expected installment — not received giving; retained in the pledge report instead.'});
+      else if(/^donation$/i.test(cls))syncNew.push(row);
+      else if(/^exclude/i.test(cls))syncIgnored.push({...row,_reason:cls});
+      else syncReview.push({...row,_reason:`Unclassified occasion: ${row._occasion||'(blank)'}`});
+    });
+    renderSyncResults(SYNC_TYPES.payments);
+  }catch(e){showMsg('sync-msg','Comparison failed: '+e.message,'error');}
+}
+function planDedicationImport(row,dedValues,reviewValues){
+  const paymentId=normId(csvValue(row,'PMT_ID')),accountId=normId(csvValue(row,'ACT_ID')||csvValue(row,'PMT_ACT_ID'));
+  const dh=hdr(dedValues[0]||[]),rh=hdr(reviewValues[0]||[]);
+  const did=col(dh,'account id'),ditem=col(dh,'dedication item'),dtext=col(dh,'dedication text'),dpmt=col(dh,'admire pmt_id'),rpmt=col(rh,'admire pmt_id');
+  if(dpmt>=0&&dedValues.slice(1).some(r=>normId(r[dpmt])===paymentId))return{_dedicationAction:'existing',_dedicationReason:'Exact PMT_ID already exists in Dedications'};
+  if(rpmt>=0&&reviewValues.slice(1).some(r=>normId(r[rpmt])===paymentId))return{_dedicationAction:'queued',_dedicationReason:'Exact PMT_ID already exists in dedication review'};
+  const donorRows=did<0?[]:dedValues.slice(1).filter(r=>normId(r[did])===accountId);
+  if(!donorRows.length)return{_dedicationAction:'add',_dedicationReason:'No existing dedication row for this Account ID',_existingDedications:'',_existingDedicationText:''};
+  const items=[...new Set(donorRows.map(r=>String(r[ditem]||'').trim()).filter(Boolean))];
+  const texts=[...new Set(donorRows.map(r=>String(r[dtext]||'').trim()).filter(Boolean))];
+  const possible=items.some(x=>occasionKey(x)===occasionKey('Chayal Champion'));
+  return{
+    _dedicationAction:'review',
+    _dedicationReason:possible?'Possible existing Chayal Champion dedication has no matching PMT_ID':'New Chayal Champion payment differs from existing dedication item(s)',
+    _existingDedications:items.join(' | '),
+    _existingDedicationText:texts.join(' | ')
+  };
+}
+async function ensureImportSheet(tabName,headers,hidden=true){
+  const meta=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}?fields=sheets.properties(title)`);
+  const md=await meta.json();if((md.sheets||[]).some(s=>s.properties?.title===tabName))return;
+  const add=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:[{addSheet:{properties:{title:tabName,hidden}}}]})});
+  if(!add.ok)throw new Error(`Could not create ${tabName}.`);
+  await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tabName)}!A1?valueInputOption=RAW`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[headers]})});
+}
+function contactImportValues(src){
+  const out={},set=(k,v)=>{if(String(v||'').trim())out[k]=String(v).trim();};
+  const tels=String(csvValue(src,'Tels')||'').split('/').map(x=>x.trim()).filter(x=>x&&!/\[email\]/i.test(x)).join('; ');
+  const street=[csvValue(src,'ADR_Number'),csvValue(src,'ADR_Street'),csvValue(src,'ADR_Apt')].filter(Boolean).join(' ').trim(),full=String(csvValue(src,'Address')||'').toUpperCase();
+  set('accountid',csvValue(src,'ACT_ID'));set('name',csvValue(src,'SystemDisplay1'));set('phone',tels);set('email',csvValue(src,'Email'));set('street address',street);
+  set('city',csvValue(src,'ADR_City'));set('state/region',csvValue(src,'ADR_State'));set('zip/postal code',csvValue(src,'ADR_Zip'));
+  set('country',/CANADA/.test(full)?'Canada':/ISRAEL/.test(full)?'Israel':/USA/.test(full)?'USA':'');set('contact notes',csvValue(src,'ACT_Notes'));set('solicitor 1',csvValue(src,'Solicitor'));set('data source','Admire Weekly');return out;
+}
+function contactImportRow(src){
+  const row=new Array(Math.max(...Object.values(contactHdr))+1).fill('');
+  Object.entries(contactImportValues(src)).forEach(([k,v])=>{const c=col(contactHdr,k);if(c>=0)row[c]=v;});
+  return row;
+}
+async function applyAdmireSync(){
+  const rows=syncNew.filter(r=>!r._skip),type=document.getElementById('sync-type').value;if(!rows.length)return;
+  if(!confirm(`Import ${rows.length} reviewed ${SYNC_TYPES[type].label}?`))return;
+  showMsg('sync-write-msg','Importing reviewed records…','info');
+  try{
+    let tab,values;
+    if(type==='contacts'){
+      tab=TAB.CONTACTS;
+      const updates=[];
+      rows.filter(r=>r._updateCi!==undefined).forEach(r=>Object.entries(r._contactChanges||{}).forEach(([field,value])=>{
+        const c=col(contactHdr,field);if(c>=0)updates.push({range:`${TAB.CONTACTS}!${colToLetter(c)}${r._updateCi+2}`,values:[[value]]});
+      }));
+      if(updates.length){
+        const ur=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({valueInputOption:'RAW',data:updates})});
+        if(!ur.ok)throw new Error('Could not update existing contacts.');
+      }
+      values=rows.filter(r=>r._updateCi===undefined).map(contactImportRow);
+    }
+    else if(type==='pledges'){
+      tab='Admire_Pledges';const h=['PLG_ID','ACT_ID','Name','Pledge Date','Pledge Amount','Occasion','Total Paid','Outstanding','Due Now','Last Payment','Solicitor Codes','Comment','Currency','Imported At'];await ensureImportSheet(tab,h);
+      values=rows.map(r=>[csvValue(r,'PLG_ID'),csvValue(r,'ACT_ID'),csvValue(r,'SystemDisplay1'),csvValue(r,'PLG_Date'),csvValue(r,'PLG_Amount'),csvValue(r,'OCC_Name'),csvValue(r,'TotalPaid'),csvValue(r,'Outstanding'),csvValue(r,'DueNow'),csvValue(r,'LastPayment'),csvValue(r,'SPLG_AcaCodes'),csvValue(r,'PLG_Comment'),csvValue(r,'CUR_Code'),new Date().toISOString()]);
+    }else{
+      tab=TAB.DON_DETAIL;values=rows.map(r=>{const aid=normId(csvValue(r,'ACT_ID')||csvValue(r,'PMT_ACT_ID')),ci=contactByAcct.get(aid),cr=ci===undefined?null:contactRows[ci],cat=cr?String(get(cr,contactHdr,'category')||''):'',sol=cr?get(cr,contactHdr,'solicitor 1'):'',date=String(csvValue(r,'PMT_DateNoTime')||csvValue(r,'Date')||'').slice(0,10);
+        return[csvValue(r,'PMT_ID'),aid,csvValue(r,'SystemDisplay1'),date,date.slice(0,4),r._occasion,r._amount,csvValue(r,'Method'),csvValue(r,'CUR_Code'),'',/student|parent/i.test(cat)?'Not Eligible':'Eligible, Not Processed','',csvValue(r,'PmtNotes'),'Donation',sol];});
+      const dedicationRows=syncDedicationPending.filter(r=>syncExisting.includes(r)||rows.includes(r));
+      await writeDedicationRouting(dedicationRows);
+      syncDedicationPending=[];
+    }
+    if(values.length){
+      const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values})});
+      if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+    }
+    showMsg('sync-write-msg',`✓ Imported ${rows.length} ${SYNC_TYPES[type].label}. Existing and review rows were not changed.`,'success');syncExisting.push(...rows);syncNew=[];renderSyncResults(SYNC_TYPES[type]);scheduleBackgroundRefresh();
+  }catch(e){showMsg('sync-write-msg','Import failed: '+e.message,'error');}
+}
+async function processDedicationQueue(){
+  if(!syncDedicationPending.length)return;
+  if(!confirm(`Process ${syncDedicationPending.length} Chayal Champion dedication item(s)? Existing dedication rows will not be overwritten.`))return;
+  showMsg('sync-write-msg','Processing dedication items…','info');
+  try{
+    const result=await writeDedicationRouting(syncDedicationPending);
+    syncDedicationPending=[];renderSyncResults(SYNC_TYPES.payments);
+    showMsg('sync-msg',`✓ ${result.added} added to Dedications; ${result.reviewed} sent to Dedication_Import_Review; ${result.skipped} already recorded.`,'success');
+  }catch(e){showMsg('sync-write-msg','Dedication processing failed: '+e.message,'error');}
+}
+async function writeDedicationRouting(candidateRows){
+  if(!candidateRows.length)return{added:0,reviewed:0,skipped:0};
+  const dedRes=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Dedications!A:N`);
+  if(!dedRes.ok)throw new Error('Could not re-check Dedications.');
+  let dedValues=(await dedRes.json()).values||[];
+  const reviewHeaders=['Review Status','Admire PMT_ID','Account ID','Donor Name','Payment Date','Payment Amount','Admire Occasion','Payment Notes','Existing Dedication Items','Existing Dedication Text','Review Reason','Queued At'];
+  await ensureImportSheet('Dedication_Import_Review',reviewHeaders,false);
+  const reviewRes=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Dedication_Import_Review!A:L`);
+  let reviewValues=reviewRes.ok?((await reviewRes.json()).values||[]):[reviewHeaders];
+  const systemHeaders=['Admire PMT_ID','Admire Payment Date','Admire Payment Amount','Admire Occasion'];
+  const currentHeader=dedValues[0]||[],headerWrite=systemHeaders.map((h,i)=>currentHeader[10+i]||h);
+  if(systemHeaders.some((h,i)=>!String(currentHeader[10+i]||'').trim())){
+    const hr=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Dedications!K1:N1?valueInputOption=RAW`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[headerWrite]})});
+    if(!hr.ok)throw new Error('Could not add dedication payment-ID headers.');
+    dedValues[0]=[...currentHeader.slice(0,10),...headerWrite];
+  }
+  const addRows=[],reviewRows=[];let skipped=0;
+  candidateRows.forEach(row=>{
+    const fresh=planDedicationImport(row,dedValues,reviewValues),paymentId=normId(csvValue(row,'PMT_ID'));
+    const aid=normId(csvValue(row,'ACT_ID')||csvValue(row,'PMT_ACT_ID')),name=csvValue(row,'SystemDisplay1'),date=String(csvValue(row,'PMT_DateNoTime')||csvValue(row,'Date')||'').slice(0,10);
+    if(fresh._dedicationAction==='add'){
+      const out=[aid,'y',name,'','Chayal Champion',csvValue(row,'PmtNotes'),'Text Pending','','','Imported from Admire; dedication text requires review',paymentId,date,row._amount,row._occasion];
+      addRows.push(out);dedValues.push(out);
+    }else if(fresh._dedicationAction==='review'){
+      const out=['Pending',paymentId,aid,name,date,row._amount,row._occasion,csvValue(row,'PmtNotes'),fresh._existingDedications||'',fresh._existingDedicationText||'',fresh._dedicationReason,new Date().toISOString()];
+      reviewRows.push(out);reviewValues.push(out);
+    }else skipped++;
+  });
+  if(addRows.length){
+    const ar=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Dedications!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:addRows})});
+    if(!ar.ok)throw new Error('Could not append new Chayal Champion dedications.');
+  }
+  if(reviewRows.length){
+    const rr=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/Dedication_Import_Review!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:reviewRows})});
+    if(!rr.ok)throw new Error('Could not append dedication review items.');
+  }
+  return{added:addRows.length,reviewed:reviewRows.length,skipped};
 }
 function downloadSyncNewCSV(){
   const rows=syncNew.filter(r=>!r._skip);if(!rows.length){showMsg('sync-write-msg','Nothing selected.','error');return;}
-  const headers=[...new Set(rows.flatMap(r=>Object.keys(r).filter(k=>k!=='_skip')))];
+  const headers=[...new Set(rows.flatMap(r=>Object.keys(r).filter(k=>!k.startsWith('_'))))];
   const csv=[headers,...rows.map(r=>headers.map(h=>r[h]||''))].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='admire_new_payments_review.csv';a.click();
-  showMsg('sync-write-msg',`✓ Downloaded ${rows.length} new payment row(s) for review. No master data was changed.`,'success');
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='admire_safe_import_review.csv';a.click();
+  showMsg('sync-write-msg',`✓ Downloaded ${rows.length} safe import row(s) for review.`,'success');
 }
-function clearSyncResultsOnly(){syncNew=[];document.getElementById('sync-results').style.display='none';}
-function clearSync(){syncParsed=[];syncNew=[];document.getElementById('sync-file').value='';document.getElementById('sync-fname').style.display='none';document.getElementById('sync-results').style.display='none';document.getElementById('sync-msg').style.display='none';}
+function downloadSyncReviewCSV(){const keep=syncNew;syncNew=syncReview;downloadSyncNewCSV();syncNew=keep;}
+function clearSyncResultsOnly(){syncNew=[];syncExisting=[];syncReview=[];syncIgnored=[];syncDedicationPending=[];document.getElementById('sync-results').style.display='none';}
+function clearSync(){syncParsed=[];syncDetectedType='';clearSyncResultsOnly();document.getElementById('sync-file').value='';document.getElementById('sync-fname').style.display='none';document.getElementById('sync-msg').style.display='none';}
 
 
 // ─── BATCH EDIT ───────────────────────────────────────────────────────────────
