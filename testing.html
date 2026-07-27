@@ -3730,9 +3730,22 @@ function renderSyncResults(cfg){
   const res=document.getElementById('sync-results');res.style.display='block';
   const dedicationAdds=syncDedicationPending.filter(r=>r._dedicationAction==='add').length;
   const dedicationReviews=syncDedicationPending.filter(r=>r._dedicationAction==='review').length;
+  const isContacts=cfg===SYNC_TYPES.contacts;
+  const contactAdds=isContacts?syncNew.filter(r=>r._updateCi===undefined).length:0;
+  const contactUpdates=isContacts?syncNew.filter(r=>r._updateCi!==undefined).length:0;
+  const safeLabel=isContacts?'New + updates':'Safe import';
+  const resultHeading=isContacts?'Contacts to review':`New ${escapeHtml(cfg.label)} to review`;
   res.innerHTML=`
+    <div class="card" style="border-left:4px solid var(--blue);font-size:12px;line-height:1.55;color:var(--gray-600)">
+      <b>${isContacts?'Contacts report detected':cfg===SYNC_TYPES.pledges?'Pledges report detected':'Payments report detected'}</b><br/>
+      ${isContacts
+        ?`Matched by AccountID: ${contactAdds} entirely new contact${contactAdds===1?'':'s'}, ${contactUpdates} existing contact${contactUpdates===1?'':'s'} with changed nonblank contact information, and ${syncExisting.length} existing contact${syncExisting.length===1?'':'s'} with no changes. Blank Admire fields do not erase existing information.`
+        :cfg===SYNC_TYPES.pledges
+          ?'Pledges are matched by PLG_ID. Existing pledge IDs are not imported again.'
+          :'Payments are split into allocations and matched by PMT_ID, occasion, and amount. Donation classifications and dedication rules are applied before import.'}
+    </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
-      <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${syncNew.length}</div><div style="font-size:10px">Safe import</div></div>
+      <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${syncNew.length}</div><div style="font-size:10px">${safeLabel}</div></div>
       <div style="background:var(--gray-200);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700">${syncExisting.length}</div><div style="font-size:10px">Already present</div></div>
       <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--amber)">${syncReview.length}</div><div style="font-size:10px">Needs review</div></div>
       <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:20px;font-weight:700">${syncIgnored.length}</div><div style="font-size:10px">Ignored</div></div>
@@ -3745,8 +3758,8 @@ function renderSyncResults(cfg){
       </div>
       ${!syncNew.length?`<div class="btn-row"><button class="btn btn-primary" onclick="processDedicationQueue()">Process dedication items</button></div><div id="sync-write-msg" class="msg"></div>`:''}
     </div>`:''}
-    ${syncNew.length?`<div class="card"><div class="section-head">🟢 New ${escapeHtml(cfg.label)} to review</div>
-    ${syncNew.slice(0,100).map((row,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200)"><input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" /><div style="font-size:12px"><b>${escapeHtml(syncRowTitle(row,cfg))}</b><div style="color:var(--gray-500)">${escapeHtml(csvValue(row,'Date')||csvValue(row,'PLG_Date')||csvValue(row,'PMT_DateNoTime')||firstRowValue(row,cfg.keyAliases))}</div></div></label>`).join('')}
+    ${syncNew.length?`<div class="card"><div class="section-head">🟢 ${resultHeading}</div>
+    ${syncNew.slice(0,100).map((row,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200)"><input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" /><div style="font-size:12px"><b>${escapeHtml(syncRowTitle(row,cfg))}</b><div style="color:var(--gray-500)">${isContacts?(row._updateCi===undefined?'New contact':`Update existing · ${escapeHtml(Object.keys(row._contactChanges||{}).join(', '))}`):escapeHtml(csvValue(row,'Date')||csvValue(row,'PLG_Date')||csvValue(row,'PMT_DateNoTime')||firstRowValue(row,cfg.keyAliases))}</div></div></label>`).join('')}
     ${syncNew.length>100?`<div style="font-size:11px;color:var(--gray-500)">…and ${syncNew.length-100} more</div>`:''}
     <div class="btn-row"><button class="btn btn-primary" onclick="applyAdmireSync()">Import selected</button><button class="btn" onclick="downloadSyncNewCSV()">Download review CSV</button></div><div id="sync-write-msg" class="msg"></div></div>`:''}
     ${syncReview.length?`<div class="card"><div class="section-head">🟡 Needs review (${syncReview.length})</div>${syncReview.slice(0,12).map(r=>`<div style="font-size:11px;padding:4px 0"><b>${escapeHtml(syncRowTitle(r,cfg))}</b> · ${escapeHtml(r._reason||'Needs review')}</div>`).join('')}<button class="btn btn-sm" onclick="downloadSyncReviewCSV()">Download review items</button></div>`:''}`;
