@@ -755,8 +755,7 @@ select.form-input{cursor:pointer}
 
       <label class="form-label" style="margin-top:0">Operation</label>
       <select class="form-input" id="batch-op" onchange="onBatchOpChange()">
-        <option value="">— choose operation —</option>
-        <option value="csv">CSV Batch Update (recommended)</option>
+        <option value="csv" selected>CSV Batch Update (recommended)</option>
         <option value="ded-status">Dedication Status</option>
         <option value="address">Address Update</option>
         <option value="action">Action Plan / Month / Year</option>
@@ -765,15 +764,20 @@ select.form-input{cursor:pointer}
     </div>
 
     <!-- CSV BATCH UPDATE -->
-    <div id="batch-csv" class="batch-op-card" style="display:none">
+    <div id="batch-csv" class="batch-op-card" style="display:block">
       <div class="batch-op-title">📄 CSV Batch Update</div>
       <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px">Download a template, make changes only in columns beginning with <b>Edited</b>, then upload it. Blank edited cells leave existing data unchanged; enter <b>CLEAR</b> to erase a value.</p>
       <div class="btn-row" style="margin-top:8px">
         <button class="btn" onclick="downloadBatchTemplate('donors')">⬇️ Donor template</button>
         <button class="btn" onclick="downloadBatchTemplate('all')">⬇️ All contacts</button>
       </div>
-      <label class="form-label">Upload edited CSV</label>
-      <input class="form-input" type="file" id="batch-csv-file" accept=".csv,text/csv" onchange="loadBatchCSV(this.files[0])" />
+      <label class="form-label">Attach edited CSV</label>
+      <div style="border:2px dashed var(--gray-300);border-radius:var(--radius);padding:18px 14px;text-align:center;cursor:pointer;background:white" onclick="document.getElementById('batch-csv-file').click()" ondragover="event.preventDefault()" ondrop="event.preventDefault();loadBatchCSV(event.dataTransfer.files[0])">
+        <div style="font-size:24px">📎</div>
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">Choose or drop a CSV file</div>
+        <div id="batch-csv-fname" style="font-size:11px;color:var(--gray-500);margin-top:3px">No file attached</div>
+      </div>
+      <input type="file" id="batch-csv-file" accept=".csv,text/csv" style="display:none" onchange="loadBatchCSV(this.files[0])" />
       <div id="batch-csv-preview" style="margin-top:10px"></div>
       <div class="btn-row" style="margin-top:10px">
         <button class="btn" onclick="previewBatchCSV()">Preview again</button>
@@ -874,10 +878,17 @@ select.form-input{cursor:pointer}
   <!-- SYNC TAB -->
   <div id="tab-sync-content" style="display:none">
     <div class="card">
-      <div class="section-head">🔄 Compare Admire Payments</div>
-      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Upload an Admire CSV to identify new, duplicate, and unknown payment records. This is comparison-only until Admire confirms the permanent weekly export layout; it will not write unclassified payments into the master.</p>
-      <label class="form-label">Payments tab name</label>
-      <input class="form-input" id="sync-tab" value="Donations_Detail" />
+      <div class="section-head">🔄 Weekly Admire Update</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Choose the type of Admire export, attach its CSV, and compare it with the correct master tab. The app will identify new, existing, and unresolved records before anything is imported.</p>
+      <label class="form-label">Admire export type</label>
+      <select class="form-input" id="sync-type" onchange="clearSyncResultsOnly()">
+        <option value="contacts">Contacts and contact information</option>
+        <option value="donations">Donations and payments</option>
+        <option value="relationships">Relationships</option>
+        <option value="tuition">Tuition payments</option>
+        <option value="enrollments">Students and enrollments</option>
+        <option value="solicitors">Solicitor assignments</option>
+      </select>
       <label class="form-label" style="margin-top:12px">Upload Admire CSV</label>
       <div id="sync-drop" style="border:2px dashed var(--gray-300);border-radius:var(--radius);padding:24px 16px;text-align:center;cursor:pointer;margin-top:4px" onclick="document.getElementById('sync-file').click()" ondragover="event.preventDefault()" ondrop="syncDrop(event)">
         <div style="font-size:26px;margin-bottom:6px">📂</div>
@@ -3606,13 +3617,21 @@ async function saveNewContact(){
 }
 
 // ─── SYNC TAB ─────────────────────────────────────────────────────────────────
+const SYNC_TYPES={
+  contacts:{label:'contacts',tab:TAB.CONTACTS,keyAliases:['AccountID','ACT_ID'],contactAliases:['AccountID','ACT_ID']},
+  donations:{label:'payments',tab:TAB.DON_DETAIL,keyAliases:['PMT_ID'],contactAliases:['PayerACT_ID','ACT_ID']},
+  relationships:{label:'relationships',tab:TAB.RELATIONSHIPS,keyAliases:['RelationshipID','REL_ID'],contactAliases:['PersonA_AccountID','ACT_ID']},
+  tuition:{label:'tuition payments',tab:TAB.TUI_DETAIL,keyAliases:['PMT_ID'],contactAliases:['PayerACT_ID','ACT_ID']},
+  enrollments:{label:'enrollments',tab:'Enrollments',keyAliases:['EnrollmentID','ENR_ID','AdmireStudentRecordID','STD_ID'],contactAliases:['AccountID','ACT_ID','StudentAccountID']},
+  solicitors:{label:'solicitor assignments',tab:'Solicitor_Data_FROM_ADMIRE',keyAliases:['AccountID','ACT_ID'],contactAliases:['AccountID','ACT_ID']}
+};
 let syncParsed=[],syncNew=[];
 function syncDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)loadSyncFile(f);}
 function syncFileChosen(input){if(input.files[0])loadSyncFile(input.files[0]);}
 function loadSyncFile(file){
   const fn=document.getElementById('sync-fname');fn.textContent='📄 '+file.name;fn.style.display='block';
   const reader=new FileReader();
-  reader.onload=e=>{syncParsed=parseCSV(e.target.result);showMsg('sync-msg',`✓ Loaded ${syncParsed.length} rows from ${file.name}`,'success');};
+  reader.onload=e=>{syncParsed=parseCSV(e.target.result);clearSyncResultsOnly();showMsg('sync-msg',`✓ Loaded ${syncParsed.length} rows from ${file.name}`,'success');};
   reader.readAsText(file);
 }
 function parseCSV(text){
@@ -3627,17 +3646,38 @@ function parseCSVLine(line){
 }
 async function runSync(){
   if(!syncParsed.length){showMsg('sync-msg','Please upload a CSV file first.','error');return;}
-  if(isDemo){processSyncResults(new Set(['12236','18809']));return;}
-  const tab=(document.getElementById('sync-tab').value||'').trim();
-  showMsg('sync-msg','Checking existing payments…','info');
+  const type=document.getElementById('sync-type').value;
+  const cfg=SYNC_TYPES[type];
+  if(!cfg){showMsg('sync-msg','Choose an Admire export type.','error');return;}
+  if(isDemo){processSyncResults(new Set(['12236','18809']),cfg);return;}
+  showMsg('sync-msg',`Checking existing ${cfg.label}…`,'info');
   const existing=new Set();
-  try{const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}`;const res=await authedFetch(url);if(res.ok){const d=await res.json();(d.values||[]).slice(1).forEach(r=>{if(r[0])existing.add(String(r[0]).trim());});}}catch{}
-  processSyncResults(existing);
+  try{
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(cfg.tab)}`;
+    const res=await authedFetch(url);
+    if(!res.ok)throw new Error(`Could not read ${cfg.tab}.`);
+    const d=await res.json(),values=d.values||[],headers=values[0]||[],h=hdr(headers);
+    const keyCol=cfg.keyAliases.map(k=>col(h,k)).find(i=>i>=0);
+    if(keyCol===undefined)throw new Error(`No supported record ID column was found in ${cfg.tab}.`);
+    values.slice(1).forEach(r=>{const id=normId(r[keyCol]);if(id)existing.add(id);});
+  }catch(e){showMsg('sync-msg',e.message,'error');return;}
+  processSyncResults(existing,cfg);
 }
-function processSyncResults(existing){
+function firstRowValue(row,aliases){for(const a of aliases){const v=csvValue(row,a);if(v!==undefined&&String(v).trim())return normId(v);}return'';}
+function syncRowTitle(row,cfg){
+  return csvValue(row,'Name')||csvValue(row,'SystemDisplay1')||csvValue(row,'PayerName')||csvValue(row,'PersonA_Name')||firstRowValue(row,cfg.keyAliases)||'(unnamed record)';
+}
+function processSyncResults(existing,cfg){
   const knownIds=new Set(contactRows.map(r=>normId(get(r,contactHdr,'accountid'))));
   syncNew=[];const dupes=[],unknown=[];
-  syncParsed.forEach(row=>{const pid=String(row.PMT_ID||'').trim();const aid=String(row.ACT_ID||'').trim();if(existing.has(pid))dupes.push(row);else if(!knownIds.has(aid))unknown.push(row);else syncNew.push(row);});
+  syncParsed.forEach(row=>{
+    const recordId=firstRowValue(row,cfg.keyAliases);
+    const contactId=firstRowValue(row,cfg.contactAliases);
+    if(!recordId){unknown.push({...row,_reason:'Missing supported record ID'});}
+    else if(existing.has(recordId))dupes.push(row);
+    else if(cfg!==SYNC_TYPES.contacts&&contactId&&!knownIds.has(contactId))unknown.push({...row,_reason:`Unknown AccountID ${contactId}`});
+    else syncNew.push(row);
+  });
   const res=document.getElementById('sync-results');res.style.display='block';
   res.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
@@ -3645,10 +3685,10 @@ function processSyncResults(existing){
       <div style="background:var(--gray-200);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--gray-700)">${dupes.length}</div><div style="font-size:11px">Duplicate</div></div>
       <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--amber)">${unknown.length}</div><div style="font-size:11px;color:var(--amber)">Unknown</div></div>
     </div>
-    ${syncNew.length?`<div class="card"><div class="section-head">🟢 New payments to add</div>
-    ${syncNew.map((row,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200);cursor:pointer"><input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" style="accent-color:var(--blue)" /><div style="flex:1;font-size:12px"><div style="font-weight:600">${row.SystemDisplay1||row.ACT_ID}</div><div style="color:var(--gray-500)">${row.PMT_DateNoTime||row.Date||''} · $${parseFloat(row.AppliedAmount||0).toLocaleString()} ${row.CUR_Code||'USD'} · ${row.AppliedTo||''}</div></div></label>`).join('')}
-    <div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="downloadSyncNewCSV()">Download selected for review</button></div><div id="sync-write-msg" class="msg"></div></div>`:'<div class="card" style="font-size:13px;color:var(--gray-500)">No new payments found.</div>'}
-    ${unknown.length?`<div class="card"><div class="section-head">🟡 Unknown contacts (${unknown.length})</div>${unknown.slice(0,10).map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-200)"><b>${r.SystemDisplay1||r.ACT_ID}</b> · ${r.PMT_DateNoTime||''} · $${parseFloat(r.AppliedAmount||0).toLocaleString()}</div>`).join('')}${unknown.length>10?`<div style="font-size:11px;color:var(--gray-500);padding-top:6px">…and ${unknown.length-10} more</div>`:''}</div>`:''}`;
+    ${syncNew.length?`<div class="card"><div class="section-head">🟢 New ${escapeHtml(cfg.label)} to review</div>
+    ${syncNew.map((row,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-200);cursor:pointer"><input type="checkbox" checked onchange="syncNew[${i}]._skip=!this.checked" style="accent-color:var(--blue)" /><div style="flex:1;font-size:12px"><div style="font-weight:600">${escapeHtml(syncRowTitle(row,cfg))}</div><div style="color:var(--gray-500)">${escapeHtml(csvValue(row,'Date')||csvValue(row,'PMT_DateNoTime')||firstRowValue(row,cfg.keyAliases))}</div></div></label>`).join('')}
+    <div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="downloadSyncNewCSV()">Download selected for review</button></div><div id="sync-write-msg" class="msg"></div></div>`:`<div class="card" style="font-size:13px;color:var(--gray-500)">No new ${escapeHtml(cfg.label)} found.</div>`}
+    ${unknown.length?`<div class="card"><div class="section-head">🟡 Unresolved records (${unknown.length})</div>${unknown.slice(0,10).map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-200)"><b>${escapeHtml(syncRowTitle(r,cfg))}</b> · ${escapeHtml(r._reason||'Needs review')}</div>`).join('')}${unknown.length>10?`<div style="font-size:11px;color:var(--gray-500);padding-top:6px">…and ${unknown.length-10} more</div>`:''}</div>`:''}`;
   hideMsg('sync-msg');
 }
 function downloadSyncNewCSV(){
@@ -3659,6 +3699,7 @@ function downloadSyncNewCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='admire_new_payments_review.csv';a.click();
   showMsg('sync-write-msg',`✓ Downloaded ${rows.length} new payment row(s) for review. No master data was changed.`,'success');
 }
+function clearSyncResultsOnly(){syncNew=[];document.getElementById('sync-results').style.display='none';}
 function clearSync(){syncParsed=[];syncNew=[];document.getElementById('sync-file').value='';document.getElementById('sync-fname').style.display='none';document.getElementById('sync-results').style.display='none';document.getElementById('sync-msg').style.display='none';}
 
 
@@ -3712,6 +3753,7 @@ function downloadBatchTemplate(scope){
 }
 function loadBatchCSV(file){
   if(!file)return;
+  const fn=document.getElementById('batch-csv-fname');if(fn)fn.textContent='📄 '+file.name;
   const reader=new FileReader();
   reader.onload=e=>{
     batchCSVRows=parseCSV(e.target.result);
