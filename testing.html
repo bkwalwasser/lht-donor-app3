@@ -724,6 +724,13 @@ select.form-input{cursor:pointer}
         <div><label class="form-label">Zip / Postal Code</label><input class="form-input" id="ac-zip" placeholder="07666" /></div>
         <div><label class="form-label">Country</label><input class="form-input" id="ac-country" placeholder="USA" /></div>
       </div>
+      <label class="form-label">Solicitor 1</label>
+      <div class="sol-wrap">
+        <input class="form-input" id="ac-solicitor" placeholder="Defaults to the signed-in staff user" oninput="onBatchSolSearch(this,'ac-sol-drop','ac-sol-val')" autocomplete="off" />
+        <input type="hidden" id="ac-sol-val" />
+        <div class="sol-dropdown" id="ac-sol-drop"></div>
+      </div>
+      <div style="font-size:10px;color:var(--gray-500);margin-top:4px">The signed-in staff member is selected automatically. Change it here only when another solicitor should own this prospect.</div>
       <label class="form-label">Action Plan</label>
       <textarea class="form-textarea" id="ac-action" placeholder="e.g. Call after Pesach"></textarea>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -749,11 +756,30 @@ select.form-input{cursor:pointer}
       <label class="form-label" style="margin-top:0">Operation</label>
       <select class="form-input" id="batch-op" onchange="onBatchOpChange()">
         <option value="">— choose operation —</option>
+        <option value="csv">CSV Batch Update (recommended)</option>
         <option value="ded-status">Dedication Status</option>
         <option value="address">Address Update</option>
         <option value="action">Action Plan / Month / Year</option>
         <option value="solicitor">Solicitor Assignment</option>
       </select>
+    </div>
+
+    <!-- CSV BATCH UPDATE -->
+    <div id="batch-csv" class="batch-op-card" style="display:none">
+      <div class="batch-op-title">📄 CSV Batch Update</div>
+      <p style="font-size:12px;color:var(--gray-500);margin-bottom:8px">Download a template, make changes only in columns beginning with <b>Edited</b>, then upload it. Blank edited cells leave existing data unchanged; enter <b>CLEAR</b> to erase a value.</p>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn" onclick="downloadBatchTemplate('donors')">⬇️ Donor template</button>
+        <button class="btn" onclick="downloadBatchTemplate('all')">⬇️ All contacts</button>
+      </div>
+      <label class="form-label">Upload edited CSV</label>
+      <input class="form-input" type="file" id="batch-csv-file" accept=".csv,text/csv" onchange="loadBatchCSV(this.files[0])" />
+      <div id="batch-csv-preview" style="margin-top:10px"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn" onclick="previewBatchCSV()">Preview again</button>
+        <button class="btn btn-primary" id="batch-csv-apply" onclick="applyBatchCSV()" disabled>Apply reviewed changes</button>
+      </div>
+      <div id="batch-csv-msg" class="msg"></div>
     </div>
 
     <!-- DED STATUS -->
@@ -950,6 +976,7 @@ const TAB = {
   RELATIONSHIPS:'Relationships', DON_OVERVIEW:'Donations_Overview',
   DON_DETAIL:'Donations_Detail', TUI_OVERVIEW:'Tuition_Overview', TUI_DETAIL:'Tuition_Detail',
   SOL_OVERRIDES:'Manual_Solicitor_Overrides',
+  CHANGE_LOG:'App_Change_Log',
 };
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
@@ -1299,6 +1326,7 @@ function showTab(name){
   document.getElementById('ledger-section').style.display='none';
   const ps=document.getElementById('persistent-search');if(ps)ps.style.display='none';
   if(name==='queries'&&contactRows.length){ initLocationUI(); initYearDropdown(); initEducationalOptions(); }
+  if(name==='add')primeAddSolicitor();
   if(name==='reports'){ resetReportsPanels(); }
 }
 
@@ -1507,7 +1535,9 @@ const SECTION_FIELDS={
   ],
   giving:[
     {label:'Action Plan',key:'action plan'},{label:'Action Month',key:'action month'},
-    {label:'Action Year',key:'action year'},{label:'Contact Notes',key:'contact notes'}
+    {label:'Action Year',key:'action year'},{label:'Solicitor 1',key:'solicitor 1'},
+    {label:'Solicitor 2',key:'solicitor 2'},{label:'Rebbe Contact',key:'rebbe contact'},
+    {label:'External Solicitor',key:'external solicitor'},{label:'Contact Notes',key:'contact notes'}
   ],
   general:[
     {label:'Name',key:'name'},{label:'Action Plan',key:'action plan'},
@@ -1734,7 +1764,10 @@ function renderLedger(idx){
 
         <!-- GIVING SUMMARY -->
         <div class="sec-title" style="margin-top:14px"><span>Giving Summary</span>${secEditBtn('giving')}</div>
-        ${(sol1||sol2||rebbe||externalSol)?`<div class="field-row"><span class="field-label">Solicitors</span><span class="field-value" style="font-size:11px">${[sol1,sol2,rebbe,externalSol].filter(Boolean).join(' · ')}</span></div>`:''}
+        ${fieldRow('Solicitor 1','giving','solicitor 1',sol1,'text')}
+        ${fieldRow('Solicitor 2','giving','solicitor 2',sol2,'text')}
+        ${fieldRow('Rebbe Contact','giving','rebbe contact',rebbe,'text')}
+        ${fieldRow('External Solicitor','giving','external solicitor',externalSol,'text')}
         ${donCat?`<div class="field-row"><span class="field-label">Category</span><span class="field-value"><span class="hero-pill ${pillCls(donCat)}" style="margin:0">${pillLabel(donCat)}</span></span></div>`:''}
         ${donPattern?`<div class="field-row"><span class="field-label">Pattern</span><span class="field-value" style="font-size:11px">${donPattern}</span></div>`:''}
         <div class="stat-row">
@@ -2016,7 +2049,7 @@ async function saveEdit(){
   const newVal=selVal&&selVal.closest('#edit-new-sel-wrap')?.style.display!=='none'?selVal.value:document.getElementById('edit-new').value;
   if(!field){showMsg('edit-msg','Please choose a field.','error');return;}
   if(editContactIdx<0){showMsg('edit-msg','No contact loaded.','error');return;}
-  if(field==='solicitor 1'||field==='solicitor 2'){
+  if(['solicitor 1','solicitor 2','rebbe contact','external solicitor'].includes(field)){
     showMsg('edit-msg','Saving…','info');
     try{
       const acctId=normId(get(contactRows[editContactIdx],contactHdr,'accountid'));
@@ -2228,7 +2261,13 @@ async function saveInlineEdit(btn){
   if(ci<0){alert('Column not found in sheet: '+field);return;}
   wrap.innerHTML='Saving…';
   try{
-    if(!isDemo) await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
+    const solicitorFields=['solicitor 1','solicitor 2','rebbe contact','external solicitor'];
+    if(!isDemo){
+      if(solicitorFields.includes(field)){
+        const acctId=normId(get(contactRows[idx],contactHdr,'accountid'));
+        await upsertSolicitorOverrides(acctId,{[field]:newVal});
+      }else await writeSheetCell(TAB.CONTACTS, idx+2, ci, newVal);
+    }
     contactRows[idx][ci]=newVal;
     renderLedger(idx);
     scheduleBackgroundRefresh();
@@ -3505,8 +3544,28 @@ async function sendQueryEmails(){
 
 // ─── ADD CONTACT ───// ─── ADD CONTACT ──────────────────────────────────────────────────────────────
 function clearAdd(){
-  ['ac-name','ac-phone','ac-email','ac-street','ac-city','ac-state','ac-zip','ac-country','ac-action','ac-month','ac-year','ac-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['ac-name','ac-phone','ac-email','ac-street','ac-city','ac-state','ac-zip','ac-country','ac-action','ac-month','ac-year','ac-notes','ac-sol-val'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  primeAddSolicitor();
   hideMsg('ac-msg');
+}
+
+function signedInSolicitorName(){
+  const email=(signedInEmail||'').trim().toLowerCase();
+  if(!email)return'';
+  for(const r of contactRows){
+    const emails=String(get(r,contactHdr,'email')||'').split(';').map(x=>x.trim().toLowerCase());
+    if(emails.includes(email))return get(r,contactHdr,'name')||signedInEmail;
+  }
+  const known=buildSolList();
+  const local=email.split('@')[0].replace(/[^a-z]/g,'');
+  const surname=local.replace(/^[a-z]/,'');
+  return known.find(n=>String(n).toLowerCase().replace(/[^a-z]/g,'').includes(surname))||signedInEmail;
+}
+function primeAddSolicitor(){
+  const input=document.getElementById('ac-solicitor'),hidden=document.getElementById('ac-sol-val');
+  if(!input||input.value.trim())return;
+  const name=signedInSolicitorName();
+  input.value=name;if(hidden)hidden.value=name;
 }
 
 async function saveNewContact(){
@@ -3530,13 +3589,16 @@ async function saveNewContact(){
   setF('action year',document.getElementById('ac-year').value||'');
   setF('contact notes',document.getElementById('ac-notes').value||'');
   setF('data source','Frontend');
-  if(isDemo){contactRows.push(newRow);buildIndexes();showMsg('ac-msg',`✓ Added ${prospectId} (demo mode).`,'success');setTimeout(clearAdd,1500);return;}
+  const defaultSolicitor=(document.getElementById('ac-sol-val').value||document.getElementById('ac-solicitor').value||signedInSolicitorName()).trim();
+  setF('solicitor 1',defaultSolicitor);
+  if(isDemo){contactRows.push(newRow);buildIndexes();showMsg('ac-msg',`✓ Added ${prospectId} with ${defaultSolicitor||'no solicitor'} (demo mode).`,'success');setTimeout(clearAdd,1500);return;}
   showMsg('ac-msg','Saving…','info');
   try{
     const url=`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.CONTACTS)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
     const res=await authedFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[newRow]})});
     if(!res.ok){const d=await res.json();showMsg('ac-msg','Error: '+(d?.error?.message||res.status),'error');return;}
     contactRows.push(newRow);buildIndexes();
+    if(defaultSolicitor)await upsertSolicitorOverrides(prospectId,{'solicitor 1':defaultSolicitor});
     document.getElementById('topbar-badge').textContent=(signedInEmail||'Live')+' · '+contactRows.length+' contacts';
     showMsg('ac-msg',`✓ Added to sheet as Prospective (${prospectId})!`,'success');
     setTimeout(clearAdd,2000);
@@ -3556,7 +3618,7 @@ function loadSyncFile(file){
 function parseCSV(text){
   const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];
   const hdrs=parseCSVLine(lines[0]);
-  return lines.slice(1).map(l=>{const vals=parseCSVLine(l);const obj={};hdrs.forEach((h,i)=>{obj[h.trim().replace(/^\uFEFF/,'')]=(vals[i]||'').trim();});return obj;}).filter(r=>r.PMT_ID||r.ACT_ID);
+  return lines.slice(1).map(l=>{const vals=parseCSVLine(l);const obj={};hdrs.forEach((h,i)=>{obj[h.trim().replace(/^\uFEFF/,'')]=(vals[i]||'').trim();});return obj;}).filter(r=>Object.values(r).some(v=>String(v||'').trim()));
 }
 function parseCSVLine(line){
   const res=[];let cur='',inQ=false;
@@ -3604,9 +3666,182 @@ function clearSync(){syncParsed=[];syncNew=[];document.getElementById('sync-file
 
 function onBatchOpChange(){
   const op=document.getElementById('batch-op').value;
-  const ops=['ded-status','address','action','solicitor'];
+  const ops=['csv','ded-status','address','action','solicitor'];
   ops.forEach(o=>{ const el=document.getElementById('batch-'+o); if(el) el.style.display=o===op?'block':'none'; });
   if(op==='ded-status') loadDedList();
+}
+
+// ── Recommended CSV Batch Update ───────────────────────────────────────────
+let batchCSVRows=[],batchCSVChanges=[],batchCSVErrors=[];
+const BATCH_EDIT_FIELDS=[
+  {csv:'Edited Solicitor',key:'solicitor 1',kind:'solicitor'},
+  {csv:'Edited Solicitor 1',key:'solicitor 1',kind:'solicitor'},
+  {csv:'Edited Solicitor 2',key:'solicitor 2',kind:'solicitor'},
+  {csv:'Edited Rebbe Contact',key:'rebbe contact',kind:'solicitor'},
+  {csv:'Edited External Solicitor',key:'external solicitor',kind:'solicitor'},
+  {csv:'Edited Action Plan',key:'action plan'},
+  {csv:'Edited Street Address',key:'street address'},
+  {csv:'Edited City',key:'city'},
+  {csv:'Edited State/Region',key:'state/region'},
+  {csv:'Edited Zip/Postal Code',key:'zip/postal code'},
+  {csv:'Edited Country',key:'country'}
+];
+function csvValue(row,name){
+  const target=name.toLowerCase();
+  const k=Object.keys(row).find(x=>x.trim().toLowerCase()===target);
+  return k===undefined?undefined:row[k];
+}
+function csvCell(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';}
+function downloadCSVFile(filename,headers,rows){
+  const csv=[headers,...rows].map(row=>row.map(csvCell).join(',')).join('\r\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function downloadBatchTemplate(scope){
+  const headers=['AccountID','Name','Email','Solicitor 1','Solicitor 2','Rebbe Contact','External Solicitor','Action Plan','Action Date','Street Address','City','State/Region','Zip/Postal Code','Country','Edited Solicitor 1','Edited Solicitor 2','Edited Rebbe Contact','Edited External Solicitor','Edited Action Plan','Edited Action Date','Edited Street Address','Edited City','Edited State/Region','Edited Zip/Postal Code','Edited Country'];
+  const selected=contactRows.filter(r=>scope==='all'||/\bdonor\b/i.test(get(r,contactHdr,'category')));
+  const rows=selected.map(r=>[
+    normId(get(r,contactHdr,'accountid')),get(r,contactHdr,'name'),get(r,contactHdr,'email'),
+    get(r,contactHdr,'solicitor 1'),get(r,contactHdr,'solicitor 2'),get(r,contactHdr,'rebbe contact'),get(r,contactHdr,'external solicitor'),
+    get(r,contactHdr,'action plan'),[get(r,contactHdr,'action year'),get(r,contactHdr,'action month')].filter(Boolean).join('-'),
+    get(r,contactHdr,'street address'),get(r,contactHdr,'city'),get(r,contactHdr,'state/region'),get(r,contactHdr,'zip/postal code'),get(r,contactHdr,'country'),
+    '','','','','','','','','','',''
+  ]);
+  downloadCSVFile(scope==='all'?'lht_all_contacts_batch_template.csv':'lht_donors_batch_template.csv',headers,rows);
+}
+function loadBatchCSV(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    batchCSVRows=parseCSV(e.target.result);
+    showMsg('batch-csv-msg',`Loaded ${batchCSVRows.length} row(s) from ${file.name}. Review the preview before applying.`,'info');
+    previewBatchCSV();
+  };
+  reader.readAsText(file);
+}
+function resolveBatchContact(row){
+  const acctId=normId(csvValue(row,'AccountID')||'');
+  if(acctId){
+    const ci=contactByAcct.get(acctId);
+    return ci===undefined?{error:`AccountID ${acctId} was not found.`}:{acctId,ci,matchedBy:'AccountID'};
+  }
+  const email=String(csvValue(row,'Email')||'').trim().toLowerCase();
+  if(!email)return{error:'Missing AccountID and Email.'};
+  const hits=[];
+  contactRows.forEach((r,ci)=>{
+    const emails=String(get(r,contactHdr,'email')||'').split(';').map(x=>x.trim().toLowerCase());
+    if(emails.includes(email))hits.push(ci);
+  });
+  if(hits.length!==1)return{error:hits.length?`Email ${email} matches more than one contact.`:`Email ${email} was not found.`};
+  return{acctId:normId(get(contactRows[hits[0]],contactHdr,'accountid')),ci:hits[0],matchedBy:'Email'};
+}
+function normalizedEditedValue(v){return String(v||'').trim().toUpperCase()==='CLEAR'?'':String(v||'').trim();}
+function parseEditedActionDate(v){
+  const raw=String(v||'').trim();
+  if(!raw)return null;
+  if(raw.toUpperCase()==='CLEAR')return{date:'',month:'',year:''};
+  const m=raw.match(/^(\d{4})-(\d{1,2})(?:-\d{1,2})?$/);
+  if(!m||+m[2]<1||+m[2]>12)return{error:`Invalid action date "${raw}". Use YYYY-MM-DD.`};
+  return{date:raw,year:m[1],month:String(+m[2])};
+}
+function previewBatchCSV(){
+  batchCSVChanges=[];batchCSVErrors=[];
+  batchCSVRows.forEach((row,rowIndex)=>{
+    const resolved=resolveBatchContact(row);
+    if(resolved.error){batchCSVErrors.push(`Row ${rowIndex+2}: ${resolved.error}`);return;}
+    const {acctId,ci,matchedBy}=resolved;
+    const seenKeys=new Set();
+    BATCH_EDIT_FIELDS.forEach(def=>{
+      if(seenKeys.has(def.key))return;
+      const raw=csvValue(row,def.csv);
+      if(raw===undefined||String(raw).trim()==='')return;
+      seenKeys.add(def.key);
+      const value=normalizedEditedValue(raw),old=get(contactRows[ci],contactHdr,def.key)||'';
+      if(String(old)===String(value))return;
+      batchCSVChanges.push({rowIndex,acctId,ci,matchedBy,field:def.key,old,value,kind:def.kind||'contact'});
+    });
+    const actionRaw=csvValue(row,'Edited Action Date');
+    if(actionRaw!==undefined&&String(actionRaw).trim()!==''){
+      const parsed=parseEditedActionDate(actionRaw);
+      if(parsed.error){batchCSVErrors.push(`Row ${rowIndex+2}: ${parsed.error}`);}
+      else{
+        const actionDateCol=col(contactHdr,'action date');
+        const defs=[['action month',parsed.month],['action year',parsed.year]];
+        if(actionDateCol>=0)defs.unshift(['action date',parsed.date]);
+        defs.forEach(([field,value])=>{
+          const old=get(contactRows[ci],contactHdr,field)||'';
+          if(String(old)!==String(value))batchCSVChanges.push({rowIndex,acctId,ci,matchedBy,field,old,value,kind:'contact'});
+        });
+      }
+    }
+  });
+  const box=document.getElementById('batch-csv-preview');
+  const grouped=new Set(batchCSVChanges.map(x=>x.acctId));
+  box.innerHTML=`
+    <div style="font-size:12px;margin-bottom:7px"><b>${batchCSVChanges.length}</b> field change(s) across <b>${grouped.size}</b> contact(s) · <b style="color:${batchCSVErrors.length?'#A32D2D':'var(--green)'}">${batchCSVErrors.length}</b> error(s)</div>
+    <div style="max-height:280px;overflow:auto;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+      ${batchCSVChanges.slice(0,100).map(x=>`<div style="padding:6px 8px;border-bottom:1px solid var(--gray-200);font-size:11px"><b>${escapeHtml(get(contactRows[x.ci],contactHdr,'name'))}</b> · ${escapeHtml(x.field)}<br><span style="color:var(--gray-500)">${escapeHtml(x.old||'(blank)')}</span> → <span style="color:var(--blue)">${escapeHtml(x.value||'(clear)')}</span>${x.matchedBy==='Email'?' <span style="color:var(--amber)">(matched by email)</span>':''}</div>`).join('')}
+      ${batchCSVChanges.length>100?`<div style="padding:7px;font-size:11px;color:var(--gray-500)">…and ${batchCSVChanges.length-100} more changes</div>`:''}
+    </div>
+    ${batchCSVErrors.length?`<div style="font-size:11px;color:#A32D2D;margin-top:7px">${batchCSVErrors.slice(0,20).map(escapeHtml).join('<br>')}${batchCSVErrors.length>20?'<br>…and more errors':''}</div>`:''}`;
+  document.getElementById('batch-csv-apply').disabled=!batchCSVChanges.length||!!batchCSVErrors.length;
+}
+async function ensureChangeLog(){
+  const meta=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}?fields=sheets.properties(title)`);
+  const md=await meta.json();
+  if((md.sheets||[]).some(s=>s.properties?.title===TAB.CHANGE_LOG))return;
+  const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}:batchUpdate`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:[{addSheet:{properties:{title:TAB.CHANGE_LOG,hidden:true}}}]})
+  });
+  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+  await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.CHANGE_LOG)}!A1:H1?valueInputOption=RAW`,{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({values:[['Import ID','Changed At','Changed By','AccountID','Field','Old Value','New Value','Source']]})
+  });
+}
+async function appendChangeLog(importId,changes,source){
+  if(!changes.length||isDemo)return;
+  await ensureChangeLog();
+  const now=new Date().toISOString(),by=signedInEmail||'Frontend';
+  const values=changes.map(x=>[importId,now,by,x.acctId,x.field,x.old,x.value,source]);
+  const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(TAB.CHANGE_LOG)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values})
+  });
+  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+}
+async function applyBatchCSV(){
+  if(batchCSVErrors.length||!batchCSVChanges.length)return;
+  const contacts=new Set(batchCSVChanges.map(x=>x.acctId));
+  if(!confirm(`Apply ${batchCSVChanges.length} reviewed field changes to ${contacts.size} contacts?`))return;
+  if(batchCSVChanges.length>5000){showMsg('batch-csv-msg','This file contains more than 5,000 field changes. Split it into smaller imports.','error');return;}
+  if(isDemo){showMsg('batch-csv-msg',`Demo: ${batchCSVChanges.length} reviewed changes would be applied.`,'info');return;}
+  showMsg('batch-csv-msg','Applying reviewed changes and writing the audit log…','info');
+  try{
+    const solicitorByAcct=new Map(),data=[];
+    batchCSVChanges.forEach(x=>{
+      if(x.kind==='solicitor'){
+        if(!solicitorByAcct.has(x.acctId))solicitorByAcct.set(x.acctId,{});
+        solicitorByAcct.get(x.acctId)[x.field]=x.value;
+      }else{
+        const c=col(contactHdr,x.field);
+        if(c<0)throw new Error(`Column not found: ${x.field}`);
+        data.push({range:`${TAB.CONTACTS}!${colToLetter(c)}${x.ci+2}`,values:[[x.value]]});
+      }
+    });
+    if(data.length){
+      const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchUpdate`,{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({valueInputOption:'RAW',data})
+      });
+      if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+    }
+    for(const [acctId,changes] of solicitorByAcct)await upsertSolicitorOverrides(acctId,changes);
+    const importId='CSV-'+new Date().toISOString().replace(/\D/g,'').slice(0,14);
+    await appendChangeLog(importId,batchCSVChanges,'CSV Batch Update');
+    batchCSVChanges.forEach(x=>{const c=col(contactHdr,x.field);if(c>=0)contactRows[x.ci][c]=x.value;});
+    showMsg('batch-csv-msg',`✓ Applied ${batchCSVChanges.length} changes. Audit ID: ${importId}`,'success');
+    batchCSVRows=[];batchCSVChanges=[];document.getElementById('batch-csv-apply').disabled=true;
+    scheduleBackgroundRefresh();
+  }catch(e){showMsg('batch-csv-msg','Batch update failed: '+e.message,'error');}
 }
 
 // ── Dedication Status ──────────────────────────────────────────────────────
