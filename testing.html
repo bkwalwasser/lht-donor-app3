@@ -428,6 +428,31 @@ select.form-input{cursor:pointer}
         </div>
       </div>
 
+      <!-- DONATION BUDGET -->
+      <div class="q-section">
+        <div class="q-section-head" onclick="toggleQSection('qb')">Donation Budget <span id="qb-arrow">▾</span></div>
+        <div class="q-section-body" id="qb-body">
+          <div style="font-size:11px;color:var(--gray-500);margin-bottom:7px">Leave blank for all donations. Select one or several budgets; multiple selections use OR.</div>
+          <div class="cb-group" id="qb-chips">
+            <label class="cb-chip"><input type="checkbox" value="LLR" onchange="updateChip(this)"> LLR</label>
+            <label class="cb-chip"><input type="checkbox" value="LLC" onchange="updateChip(this)"> LLC</label>
+            <label class="cb-chip"><input type="checkbox" value="General" onchange="updateChip(this)"> General</label>
+            <label class="cb-chip"><input type="checkbox" value="Midrasha" onchange="updateChip(this)"> Midrasha</label>
+            <label class="cb-chip"><input type="checkbox" value="Programming" onchange="updateChip(this)"> Programming</label>
+            <label class="cb-chip"><input type="checkbox" value="Chessed" onchange="updateChip(this)"> Chessed</label>
+            <label class="cb-chip"><input type="checkbox" value="Sefarim" onchange="updateChip(this)"> Sefarim</label>
+            <label class="cb-chip"><input type="checkbox" value="Rav Siev discretionary" onchange="updateChip(this)"> Rav Siev discretionary</label>
+            <label class="cb-chip"><input type="checkbox" value="Marc discretionary" onchange="updateChip(this)"> Marc discretionary</label>
+            <label class="cb-chip"><input type="checkbox" value="Rav Cytrin discretionary" onchange="updateChip(this)"> Rav Cytrin discretionary</label>
+            <label class="cb-chip"><input type="checkbox" value="Scholarships" onchange="updateChip(this)"> Scholarships</label>
+          </div>
+          <div class="btn-row" style="margin-top:7px">
+            <button type="button" class="btn btn-sm" onclick="setAllBudgetFilters(true)">Select all</button>
+            <button type="button" class="btn btn-sm" onclick="setAllBudgetFilters(false)">Clear</button>
+          </div>
+        </div>
+      </div>
+
       <!-- SOLICITOR -->
       <div class="q-section">
         <div class="q-section-head" onclick="toggleQSection('qs')">Solicitor <span id="qs-arrow">▾</span></div>
@@ -622,6 +647,7 @@ select.form-input{cursor:pointer}
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="largest" onchange="updateChip(this)"> Largest Gift</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="commitment" onchange="updateChip(this)"> Total Commitment</label>
             <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="futureamt" onchange="updateChip(this)"> Future Pledge</label>
+            <label class="cb-chip"><input type="checkbox" class="q-col-cb" value="budget" onchange="updateChip(this)"> Donation Budget</label>
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--navy);margin:8px 0 3px">Dedication</div>
           <div class="cb-group">
@@ -910,6 +936,16 @@ select.form-input{cursor:pointer}
     <div class="card">
       <div class="section-head">🎁 Bonus Tracker</div>
       <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Donations with a bonus status set in Donations_Detail. Historical Admire records may also show “Reviewed - No Bonus Recorded” when the payment was reviewed but no separate bonus assignment was preserved. Blank/unset rows are treated as not-yet-processed so nothing falls through the cracks.</p>
+      <div style="padding:10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--gray-100);margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--navy)">Automatic update for new, unprocessed donations</div>
+        <div style="font-size:11px;color:var(--gray-500);line-height:1.45;margin-top:3px">Checks only rows marked “Eligible, Not Processed” with no Bonus Staff. Actual Lev HaTorah students and their immediate parents are changed to Not Eligible; all other rows copy Solicitor 1 into Bonus Staff when a solicitor exists. Previously handled and blank historical rows are not changed.</div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-primary btn-sm" onclick="previewAutomaticBonusUpdate()">Preview automatic update</button>
+          <button class="btn btn-sm" id="auto-bonus-apply" onclick="applyAutomaticBonusUpdate()" style="display:none">Apply reviewed update</button>
+        </div>
+        <div id="auto-bonus-preview" style="font-size:11px;margin-top:7px"></div>
+        <div id="auto-bonus-msg" class="msg"></div>
+      </div>
       <label class="form-label" style="margin-top:0">Show</label>
       <select class="form-input" id="bonus-filter">
         <option value="needs-action">Needs action (Eligible, Not Processed + blank + Not Reviewed)</option>
@@ -1038,9 +1074,10 @@ let contactRows=[],contactHdr={};
 let studentRows=[],studentHdr={};
 let dedRows=[],dedHdr={},dedHeaderRow=[];
 let relRows=[],relHdr={};
+let bonusIneligibleIdsCache=null;
 let donOvRows=[],donOvHdr={};
 let tuiOvRows=[],tuiOvHdr={};
-let donDetRows=[],donDetHdr={};
+let donDetRows=[],donDetHdr={},donBudgetByAcct=new Map();
 let tuiDetRows=[],tuiDetHdr={};
 let solOverrideRows=[],solOverrideHdr={},solOverrideByAcct=new Map();
 let detailLoaded=false,detailLoading=false;
@@ -1062,16 +1099,55 @@ function headerNthIndex(headerRow,label,nth){
 function normId(v){if(!v)return'';return String(v).trim().replace(/,/g,'').replace(/\.0+$/,'');}
 function contactAddressParts(row){
   return {
-    street:get(row,contactHdr,'street address'),
-    city:get(row,contactHdr,'city'),
-    state:get(row,contactHdr,'state/region'),
-    zip:get(row,contactHdr,'zip/postal code'),
+    street:get(row,contactHdr,'street address','address','address 1','address1'),
+    city:get(row,contactHdr,'city','town'),
+    state:get(row,contactHdr,'state/region','state','province','region'),
+    zip:get(row,contactHdr,'zip/postal code','zip','zipcode','postal code'),
     country:get(row,contactHdr,'country')
   };
 }
+function contactPhoneText(row){
+  const direct=get(row,contactHdr,'phone','phone number','telephone','tel','primary phone');
+  if(direct)return direct;
+  const ai=normId(get(row,contactHdr,'accountid'));
+  const vals=[];
+  (studentByAcct.get(ai)||[]).forEach(si=>{
+    const sr=studentRows[si];
+    [get(sr,studentHdr,'phone1','phone 1','phone'),get(sr,studentHdr,'phone2','phone 2','mobile','cell')].forEach(v=>{
+      if(v&&!vals.includes(v))vals.push(v);
+    });
+  });
+  return vals.join('; ');
+}
+function contactEmailText(row){
+  const direct=get(row,contactHdr,'email','email address','e-mail');
+  if(direct)return direct;
+  const ai=normId(get(row,contactHdr,'accountid'));
+  const vals=[];
+  (studentByAcct.get(ai)||[]).forEach(si=>{
+    const v=get(studentRows[si],studentHdr,'email','email address','e-mail');
+    if(v&&!vals.includes(v))vals.push(v);
+  });
+  return vals.join('; ');
+}
 function contactAddressText(row){
   const p=contactAddressParts(row);
-  return [p.street,p.city,p.state,p.zip,p.country].filter(Boolean).join(', ');
+  const direct=[p.street,p.city,p.state,p.zip,p.country].filter(Boolean).join(', ');
+  if(direct)return direct;
+  const ai=normId(get(row,contactHdr,'accountid'));
+  const vals=[];
+  (studentByAcct.get(ai)||[]).forEach(si=>{
+    const sr=studentRows[si];
+    const v=[
+      get(sr,studentHdr,'address','street address','address 1','address1'),
+      get(sr,studentHdr,'city','town'),
+      get(sr,studentHdr,'state','state/region','province','region'),
+      get(sr,studentHdr,'zip','zipcode','postal code','zip/postal code'),
+      get(sr,studentHdr,'country')
+    ].filter(Boolean).join(', ');
+    if(v&&!vals.includes(v))vals.push(v);
+  });
+  return vals.join('; ');
 }
 function contactLocation(row){
   const p=contactAddressParts(row);
@@ -1253,6 +1329,7 @@ async function fetchUserEmail(){
 }
 
 function buildIndexes(){
+  bonusIneligibleIdsCache=null;
   contactByAcct=new Map();
   contactRows.forEach((r,i)=>{const id=normId(get(r,contactHdr,'accountid'));if(id)contactByAcct.set(id,i);});
   studentByAcct=new Map();
@@ -1292,7 +1369,17 @@ async function ensureDetailLoaded(){
     const data=await res.json();
     const vr=data.valueRanges||[];
     const dv=vr[0]?.values||[];
-    if(dv.length>=2){donDetHdr=hdr(dv[0]);donDetRows=dv.slice(1);}
+    if(dv.length>=2){
+      donDetHdr=hdr(dv[0]);donDetRows=dv.slice(1);donBudgetByAcct=new Map();
+      donDetRows.forEach(dr=>{
+        const id=normId(get(dr,donDetHdr,'payeract_id')||get(dr,donDetHdr,'accountid'));
+        const budget=(get(dr,donDetHdr,'which budget?')||get(dr,donDetHdr,'which budget')||'').trim();
+        if(id&&budget){
+          if(!donBudgetByAcct.has(id))donBudgetByAcct.set(id,new Set());
+          donBudgetByAcct.get(id).add(budget);
+        }
+      });
+    }
     const tv=vr[1]?.values||[];
     if(tv.length>=2){tuiDetHdr=hdr(tv[0]);tuiDetRows=tv.slice(1);}
     detailLoaded=true;
@@ -1315,7 +1402,7 @@ function disconnect(){
   if(accessToken&&window.google?.accounts?.oauth2){try{google.accounts.oauth2.revoke(accessToken,()=>{});}catch{}}
   accessToken=null;tokenExpiresAt=0;signedInEmail='';
   contactRows=[];studentRows=[];dedRows=[];relRows=[];
-  donOvRows=[];tuiOvRows=[];donDetRows=[];tuiDetRows=[];solOverrideRows=[];
+  donOvRows=[];tuiOvRows=[];donDetRows=[];donBudgetByAcct=new Map();tuiDetRows=[];solOverrideRows=[];
   detailLoaded=false;detailLoading=false;isDemo=false;
   document.getElementById('setup-section').style.display='block';
   document.getElementById('main-nav').style.display='none';
@@ -2811,12 +2898,15 @@ document.addEventListener('click',e=>{
 });
 
 // MAIN QUERY RUNNER
-function runQuery(){
+async function runQuery(){
   const btn=document.getElementById('q-run-btn');
   btn.innerHTML='<span class="spin"></span>Running…';btn.disabled=true;
-  setTimeout(()=>{
-    try{ _doRunQuery(); }finally{ btn.innerHTML='Run Query';btn.disabled=false; }
-  },30);
+  try{
+    const needsBudgets=document.querySelectorAll('#qb-chips input:checked').length>0;
+    if(needsBudgets)await ensureDetailLoaded();
+    await new Promise(resolve=>setTimeout(resolve,30));
+    _doRunQuery();
+  }finally{btn.innerHTML='Run Query';btn.disabled=false;}
 }
 
 function _doRunQuery(){
@@ -2828,6 +2918,13 @@ function _doRunQuery(){
   const selTypes=[...document.querySelectorAll('#qt-chips input:checked')].map(cb=>cb.value);
   const selTiers=[...document.querySelectorAll('#qt-tier-chips input:checked')].map(cb=>cb.value);
   const selCats=[...document.querySelectorAll('#qc-body input:checked')].map(cb=>cb.value);
+  const selBudgets=new Set([...document.querySelectorAll('#qb-chips input:checked')].map(cb=>cb.value.toLowerCase()));
+  const budgetAccounts=new Set();
+  if(selBudgets.size){
+    donBudgetByAcct.forEach((budgets,id)=>{
+      if([...budgets].some(b=>selBudgets.has(b.toLowerCase())))budgetAccounts.add(id);
+    });
+  }
   const actionFilter=document.getElementById('q-action-filter').value;
   const actionText=(document.getElementById('q-action-text').value||'').toLowerCase().trim();
   const qMonthEl=document.getElementById('q-action-month');
@@ -2883,7 +2980,7 @@ function _doRunQuery(){
     const name=get(r,contactHdr,'name');
     const category=(get(r,contactHdr,'category')||'').toLowerCase();
     const addr=contactAddressText(r);
-    const email=(get(r,contactHdr,'email')||'').trim();
+    const email=(contactEmailText(r)||'').trim();
     const action=get(r,contactHdr,'action plan');
     const notes=get(r,contactHdr,'contact notes');
     const acctId=normId(get(r,contactHdr,'accountid'));
@@ -2895,10 +2992,13 @@ function _doRunQuery(){
 
     // ── Contact type filter ──
     if(selTypes.length){
+      const ownStudentIndexes=studentByAcct.get(acctId)||[];
+      const isStudent=ownStudentIndexes.some(si=>!NON_STUDENT_STATUSES.has((get(studentRows[si],studentHdr,'status')||'').trim()));
+      const isParent=relatedStudentIndexesForAccount(acctId).some(si=>!NON_STUDENT_STATUSES.has((get(studentRows[si],studentHdr,'status')||'').trim()));
       const typeMatches=selTypes.map(t=>{
-        if(t==='donor') return category.includes('donor');
-        if(t==='student') return category.includes('student')||category.includes('alumni');
-        if(t==='parent') return category.includes('parent');
+        if(t==='donor') return category.includes('donor')||donOvByAcct.has(acctId);
+        if(t==='student') return category.includes('student')||category.includes('alumni')||isStudent;
+        if(t==='parent') return category.includes('parent')||isParent;
         if(t==='prospective') return category.includes('prospective');
         if(t==='school') return category.includes('school');
         if(t==='staff') return category.includes('staff');
@@ -2916,6 +3016,9 @@ function _doRunQuery(){
 
     // ── Giving category ──
     if(selCats.length && !selCats.includes(cat)) return;
+
+    // ── Donation budget (OR within this section) ──
+    if(selBudgets.size&&!budgetAccounts.has(acctId)) return;
 
     // ── Solicitor ──
     if(selectedSolicitors.size){
@@ -3202,8 +3305,8 @@ const Q_COL_DEFS={
   givingcat:  {label:'Category',    fn:(r,x)=>x.cat?`<span class="hero-pill ${pillCls(x.cat)}" style="font-size:10px;margin:0">${pillLabel(x.cat)}</span>`:'—'},
   recordstatus:{label:'Record Status / Data Issue',fn:(r,x)=>contactRecordStatus(r)},
   accountid:  {label:'Account ID',  fn:(r,x)=>get(r,contactHdr,'accountid')},
-  phone:      {label:'Phone',       fn:(r,x)=>get(r,contactHdr,'phone')},
-  email:      {label:'Email',       fn:(r,x)=>get(r,contactHdr,'email')},
+  phone:      {label:'Phone',       fn:(r,x)=>contactPhoneText(r)},
+  email:      {label:'Email',       fn:(r,x)=>contactEmailText(r)},
   state:      {label:'State',       fn:(r,x)=>x.state||'—'},
   address:    {label:'Address',     fn:(r,x)=>contactAddressText(r)},
   faulty:     {label:'Faulty',      fn:(r,x)=>get(r,contactHdr,'faulty phone or address')},
@@ -3219,6 +3322,7 @@ const Q_COL_DEFS={
   largest:    {label:'Largest',     fn:(r,x)=>{const d=donOvByAcct.get(normId(get(r,contactHdr,'accountid')));return d!==undefined?fmt$(get(donOvRows[d],donOvHdr,'largest gift')):''}},
   commitment: {label:'Commitment',  fn:(r,x)=>fmt$(get(r,contactHdr,'total commitment'))},
   futureamt:  {label:'Future Pledge',fn:(r,x)=>{const d=donOvByAcct.get(normId(get(r,contactHdr,'accountid')));return d!==undefined?fmt$(get(donOvRows[d],donOvHdr,'future pledge amt')):''}},
+  budget:     {label:'Donation Budget',fn:(r,x)=>[...(donBudgetByAcct.get(normId(get(r,contactHdr,'accountid')))||[])].join(', ')},
   deditem:    {label:'Ded. Item',   fn:(r,x)=>{const ids=dedByAcct.get(normId(get(r,contactHdr,'accountid')))||[];return ids.length?get(dedRows[ids[0]],dedHdr,'dedication item'):''}},
   dedstatus:  {label:'Ded. Status', fn:(r,x)=>{const ids=dedByAcct.get(normId(get(r,contactHdr,'accountid')))||[];return ids.map(di=>get(dedRows[di],dedHdr,'status')).join(', ')}},
   dedtext:    {label:'Has Text',    fn:(r,x)=>{const ids=dedByAcct.get(normId(get(r,contactHdr,'accountid')))||[];return ids.length?(ids.some(di=>(get(dedRows[di],dedHdr,'dedication text')||'').trim())?'✓ Yes':'✗ No'):''}},
@@ -3235,6 +3339,13 @@ const Q_COL_DEFS={
   spouse:     {label:'Spouse',      fn:(r,x)=>{const ai=normId(get(r,contactHdr,'accountid'));const ris=relByAcct.get(ai)||[];let out='';ris.forEach(ri=>{const rr=relRows[ri];const isA=normId(get(rr,relHdr,'persona_accountid'))===ai;const rt=(get(rr,relHdr,'relationshiptype')||'').toLowerCase();if(rt.includes('spouse')||rt.includes('wife')||rt.includes('husband')||rt.includes('partner')){out=get(rr,relHdr,isA?'personb_name':'persona_name');}});return out}},
   yahrtzeit:  {label:'Yahrtzeit',   fn:(r,x)=>{const m=get(r,contactHdr,'yahrtzeit month');const d=get(r,contactHdr,'yahrtzeit day of month');const f=get(r,contactHdr,'yahrtzeit for');return(m?(d?d+' '+m:m):'')+(f?' · '+f:'');}},
 };
+
+function setAllBudgetFilters(checked){
+  document.querySelectorAll('#qb-chips input[type=checkbox]').forEach(cb=>{
+    cb.checked=checked;
+    const chip=cb.closest('.cb-chip');if(chip)chip.classList.toggle('checked',checked);
+  });
+}
 
 let qSelectedRows=new Set(); // set of result indices (into lastQueryResults)
 
@@ -3767,6 +3878,12 @@ function renderSyncResults(cfg){
 }
 function normalizeOccasion(s){return String(s||'').replace(/\[~\d+~\]/g,'').replace(/[‘’]/g,"'").replace(/[–—]/g,'-').replace(/\s+/g,' ').trim();}
 function occasionKey(s){return normalizeOccasion(s).toLowerCase();}
+function budgetFromAppliedTo(s){
+  const text=normalizeOccasion(s);
+  if(/\bLLR\b/i.test(text))return'LLR';
+  if(/\bLLC\b/i.test(text))return'LLC';
+  return'';
+}
 function splitPaymentAllocations(row){
   const text=String(csvValue(row,'AppliedTo')||''),out=[];const re=/(.*?)(?:\(\$(-?[\d,]+(?:\.\d+)?)\))(?:,\s*|$)/g;let m;
   while((m=re.exec(text)))out.push({...row,_occasion:normalizeOccasion(m[1].replace(/^,\s*/,'')),_amount:parseFloat(m[2].replace(/,/g,''))||0});
@@ -3842,7 +3959,31 @@ function contactImportValues(src){
 function contactImportRow(src){
   const row=new Array(Math.max(...Object.values(contactHdr))+1).fill('');
   Object.entries(contactImportValues(src)).forEach(([k,v])=>{const c=col(contactHdr,k);if(c>=0)row[c]=v;});
+  const setFormula=(key,formula)=>{
+    const c=col(contactHdr,key);
+    if(c>=0&&(!row[c]||key!=='solicitor 1'))row[c]=formula;
+  };
+  // These are deliberately row formulas rather than spill formulas. Weekly
+  // imports can therefore add a complete row without blocking calculations
+  // for every other contact.
+  setFormula('total commitment',`=LET(id,INDEX(A:A,ROW()),IF(id="","",IFNA(XLOOKUP(TO_TEXT(id),ARRAYFORMULA(TO_TEXT(Donations_Overview!A:A)),Donations_Overview!AB:AB),0)+IFNA(XLOOKUP(TO_TEXT(id),ARRAYFORMULA(TO_TEXT(Donations_Overview!A:A)),Donations_Overview!AL:AL),0)))`);
+  setFormula('parent of',`=LET(id,INDEX(A:A,ROW()),IF(id="","",IFNA(VLOOKUP(id,Parent_Data_FROM_RELATIONSHIPS!A:C,3,FALSE),"")))`);
+  setFormula('category',`=LET(r,ROW(),id,INDEX(A:A,r),nm,INDEX(B:B,r),total,INDEX(D:D,r),parentof,INDEX(K:K,r),manualcat,IFNA(XLOOKUP(id,Manual_Category_Overrides!A:A,Manual_Category_Overrides!B:B),""),oldcat,IFNA(XLOOKUP(id,'All contacts_Pre_Parent_Rebuild'!A:A,'All contacts_Pre_Parent_Rebuild'!C:C),""),IF(nm="","",IF(LEFT(TO_TEXT(id),5)="PROS-","Prospective",IF(manualcat<>"",manualcat,IF(oldcat="Prospective","Prospective",TEXTJOIN("; ",TRUE,IF(IFNA(VLOOKUP(id,'All Students'!A:F,6,FALSE),"")="Student","Student",""),IF(parentof<>"","Parent",""),IF(total>0,IFS(total>=100000,"Donor Above 100k",total>=25000,"Donor 25k-99.9k",total>=10000,"Donor 10k-24.9k",total>=5000,"Donor 5k-9.9k",TRUE,"Donor under 5k"),""),IF(REGEXMATCH(oldcat,"(?i)staff"),"Staff","")))))))`);
+  const solFormula=(overrideCol,admireCol)=>`=LET(id,INDEX(A:A,ROW()),IF(id="","",IFNA(XLOOKUP(id,FILTER(Manual_Solicitor_Overrides!A:A,Manual_Solicitor_Overrides!${overrideCol}:${overrideCol}<>""),FILTER(Manual_Solicitor_Overrides!${overrideCol}:${overrideCol},Manual_Solicitor_Overrides!${overrideCol}:${overrideCol}<>"")),IFNA(VLOOKUP(id,Solicitor_Data_FROM_ADMIRE!A:E,${admireCol},FALSE),""))))`;
+  setFormula('solicitor 1',solFormula('B',2));
+  setFormula('solicitor 2',solFormula('C',3));
+  setFormula('rebbe contact',solFormula('D',4));
+  setFormula('external solicitor',solFormula('E',5));
   return row;
+}
+function admirePaymentDateParts(raw){
+  const text=String(raw||'').trim();
+  const m=text.match(/\b(\d{1,2}\/\d{1,2}\/(20\d{2}))\b/);
+  if(m)return{date:m[1],year:m[2]};
+  const iso=text.match(/\b((20\d{2})-\d{2}-\d{2})\b/);
+  if(iso)return{date:iso[1],year:iso[2]};
+  const y=text.match(/\b(20\d{2})\b/);
+  return{date:text,year:y?y[1]:''};
 }
 async function applyAdmireSync(){
   const rows=syncNew.filter(r=>!r._skip),type=document.getElementById('sync-type').value;if(!rows.length)return;
@@ -3866,14 +4007,15 @@ async function applyAdmireSync(){
       tab='Admire_Pledges';const h=['PLG_ID','ACT_ID','Name','Pledge Date','Pledge Amount','Occasion','Total Paid','Outstanding','Due Now','Last Payment','Solicitor Codes','Comment','Currency','Imported At'];await ensureImportSheet(tab,h);
       values=rows.map(r=>[csvValue(r,'PLG_ID'),csvValue(r,'ACT_ID'),csvValue(r,'SystemDisplay1'),csvValue(r,'PLG_Date'),csvValue(r,'PLG_Amount'),csvValue(r,'OCC_Name'),csvValue(r,'TotalPaid'),csvValue(r,'Outstanding'),csvValue(r,'DueNow'),csvValue(r,'LastPayment'),csvValue(r,'SPLG_AcaCodes'),csvValue(r,'PLG_Comment'),csvValue(r,'CUR_Code'),new Date().toISOString()]);
     }else{
-      tab=TAB.DON_DETAIL;values=rows.map(r=>{const aid=normId(csvValue(r,'ACT_ID')||csvValue(r,'PMT_ACT_ID')),ci=contactByAcct.get(aid),cr=ci===undefined?null:contactRows[ci],cat=cr?String(get(cr,contactHdr,'category')||''):'',sol=cr?get(cr,contactHdr,'solicitor 1'):'',date=String(csvValue(r,'PMT_DateNoTime')||csvValue(r,'Date')||'').slice(0,10);
-        return[csvValue(r,'PMT_ID'),aid,csvValue(r,'SystemDisplay1'),date,date.slice(0,4),r._occasion,r._amount,csvValue(r,'Method'),csvValue(r,'CUR_Code'),'',/student|parent/i.test(cat)?'Not Eligible':'Eligible, Not Processed','',csvValue(r,'PmtNotes'),'Donation',sol];});
+      tab=TAB.DON_DETAIL;values=rows.map(r=>{const aid=normId(csvValue(r,'ACT_ID')||csvValue(r,'PMT_ACT_ID')),ci=contactByAcct.get(aid),cr=ci===undefined?null:contactRows[ci],sol=cr?get(cr,contactHdr,'solicitor 1'):'',dateParts=admirePaymentDateParts(csvValue(r,'PMT_DateNoTime')||csvValue(r,'Date')),ineligible=isBonusIneligibleAccount(aid);
+        return[csvValue(r,'PMT_ID'),aid,csvValue(r,'SystemDisplay1'),dateParts.date,dateParts.year,r._occasion,r._amount,csvValue(r,'Method'),csvValue(r,'CUR_Code'),budgetFromAppliedTo(r._occasion),ineligible?'Not Eligible':'Eligible, Not Processed',ineligible?'':sol,csvValue(r,'PmtNotes'),'Donation',sol];});
       const dedicationRows=syncDedicationPending.filter(r=>syncExisting.includes(r)||rows.includes(r));
       await writeDedicationRouting(dedicationRows);
       syncDedicationPending=[];
     }
     if(values.length){
-      const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values})});
+      const inputMode=type==='contacts'?'USER_ENTERED':'RAW';
+      const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=${inputMode}&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values})});
       if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
     }
     showMsg('sync-write-msg',`✓ Imported ${rows.length} ${SYNC_TYPES[type].label}. Existing and review rows were not changed.`,'success');syncExisting.push(...rows);syncNew=[];renderSyncResults(SYNC_TYPES[type]);scheduleBackgroundRefresh();
@@ -4320,8 +4462,68 @@ async function applySolBatch(){
 // adjust the key lists in bonusStatusCol()/bonusStaffCol() to match.
 function bonusStatusCol(){return col(donDetHdr,'bonus status','bonusstatus','bonus_status');}
 function bonusStaffCol(){return col(donDetHdr,'bonus staff member','bonus staff','bonusstaff','bonus_staff_member','staff member','bonus staff name');}
+function isActualStudentRow(row){return String(get(row,studentHdr,'status')||'').trim().toLowerCase()==='student';}
+function bonusIneligibleAccountIds(){
+  if(bonusIneligibleIdsCache)return bonusIneligibleIdsCache;
+  const ids=new Set();
+  studentRows.forEach(row=>{
+    if(!isActualStudentRow(row))return;
+    ['accountid','parent_accountid','fatheraccountid','motheraccountid'].forEach(field=>{
+      const id=normId(get(row,studentHdr,field));if(id)ids.add(id);
+    });
+  });
+  bonusIneligibleIdsCache=ids;
+  return ids;
+}
+function isBonusIneligibleAccount(acctId){return bonusIneligibleAccountIds().has(normId(acctId));}
 
 let lastBonusRows=[];
+let automaticBonusChanges=[];
+async function previewAutomaticBonusUpdate(){
+  const box=document.getElementById('auto-bonus-preview'),apply=document.getElementById('auto-bonus-apply');
+  box.innerHTML='⏳ Reading the latest donation information…';apply.style.display='none';automaticBonusChanges=[];
+  detailLoaded=false;detailLoading=false;donDetRows=[];donDetHdr={};donBudgetByAcct=new Map();
+  await ensureDetailLoaded();
+  const sCol=bonusStatusCol(),stCol=bonusStaffCol(),solCol=col(donDetHdr,'solicitor 1 (all contacts)','solicitor 1');
+  if(sCol<0||stCol<0){box.innerHTML='<span style="color:#A32D2D">Bonus Status or Bonus Staff column was not found.</span>';return;}
+  const ineligibleIds=bonusIneligibleAccountIds();let noSolicitor=0,eligibleStaff=0,newIneligible=0;
+  donDetRows.forEach((dr,di)=>{
+    if(!isReceivedDonationRow(dr))return;
+    const status=String(dr[sCol]||'').trim(),staff=String(dr[stCol]||'').trim();
+    if(status.toLowerCase()!=='eligible, not processed'||staff)return;
+    const acctId=normId(get(dr,donDetHdr,'payeract_id'));
+    if(ineligibleIds.has(acctId)){
+      automaticBonusChanges.push({di,acctId,field:'Bonus Status',col:sCol,old:status,value:'Not Eligible'});
+      newIneligible++;return;
+    }
+    const ci=contactByAcct.get(acctId);
+    const solicitor=String((solCol>=0?dr[solCol]:'')||(ci!==undefined?get(contactRows[ci],contactHdr,'solicitor 1'):'')||'').trim();
+    if(solicitor){
+      automaticBonusChanges.push({di,acctId,field:'Bonus Staff Member',col:stCol,old:'',value:solicitor});
+      eligibleStaff++;
+    }else noSolicitor++;
+  });
+  box.innerHTML=`<b>${automaticBonusChanges.length}</b> safe change(s): ${eligibleStaff} eligible donation${eligibleStaff===1?'':'s'} will receive Bonus Staff; ${newIneligible} student/immediate-parent donation${newIneligible===1?'':'s'} will become Not Eligible. ${noSolicitor} eligible unprocessed donation${noSolicitor===1?' has':'s have'} no solicitor available and will remain unchanged.
+    ${automaticBonusChanges.length?`<div style="max-height:180px;overflow:auto;margin-top:6px;border-top:1px solid var(--gray-200)">${automaticBonusChanges.slice(0,75).map(x=>{const dr=donDetRows[x.di],name=get(dr,donDetHdr,'payername')||('AccountID '+x.acctId);return`<div style="padding:4px 0;border-bottom:1px solid var(--gray-200)"><b>${escapeHtml(name)}</b> · ${escapeHtml(x.field)}: ${escapeHtml(x.old||'(blank)')} → ${escapeHtml(x.value)}</div>`;}).join('')}${automaticBonusChanges.length>75?'<div style="padding:4px 0">…and more</div>':''}</div>`:''}`;
+  apply.style.display=automaticBonusChanges.length?'inline-flex':'none';
+}
+async function applyAutomaticBonusUpdate(){
+  if(!automaticBonusChanges.length)return;
+  if(!confirm(`Apply ${automaticBonusChanges.length} reviewed bonus change(s)? Existing Bonus Staff and previously handled statuses will not be overwritten.`))return;
+  showMsg('auto-bonus-msg','Applying reviewed bonus updates…','info');
+  try{
+    const data=automaticBonusChanges.map(x=>({range:`${TAB.DON_DETAIL}!${colToLetter(x.col)}${x.di+2}`,values:[[x.value]]}));
+    const res=await authedFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({valueInputOption:'RAW',data})});
+    if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d?.error?.message||res.status);}
+    const importId='BONUS-'+new Date().toISOString().replace(/\D/g,'').slice(0,14);
+    await appendChangeLog(importId,automaticBonusChanges,'Automatic Bonus Update');
+    automaticBonusChanges.forEach(x=>{donDetRows[x.di][x.col]=x.value;});
+    const changed=automaticBonusChanges.length;automaticBonusChanges=[];
+    document.getElementById('auto-bonus-apply').style.display='none';
+    document.getElementById('auto-bonus-preview').innerHTML='';
+    showMsg('auto-bonus-msg',`✓ Applied ${changed} bonus change(s). Previously handled rows were untouched.`,'success');
+  }catch(e){showMsg('auto-bonus-msg','Automatic update failed: '+e.message,'error');}
+}
 function bonusRowMatches(status,filterVal){
   const s=(status||'').trim();
   const sl=s.toLowerCase();
@@ -4538,7 +4740,7 @@ function loadDemo(){
   tuiOvHdr=hdr(['Record Type','AccountID','Name','2023/24 Tuition','2024/25 Registration','2024/25 Tuition','Total Tuition','Total Registration','Total School Payments']);
   solOverrideHdr=hdr(['AccountID','Solicitor 1','Solicitor 2','Rebbe Contact','External Solicitor','Updated At','Updated By']);
   solOverrideRows=[];
-  tuiOvRows=[];detailLoaded=true;donDetRows=[];tuiDetRows=[];
+  tuiOvRows=[];detailLoaded=true;donDetRows=[];donBudgetByAcct=new Map();tuiDetRows=[];
   buildIndexes();goLive();
 }
 </script>
